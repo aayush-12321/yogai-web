@@ -7,14 +7,50 @@
   <!-- Left Panel: User Info -->
   <div class="bg-white shadow rounded-lg p-6">
     <div class="flex flex-col items-center">
-      <img src="{{ user.profile.avatar.url }}" alt="Profile Picture" class="w-32 h-32 rounded-full mb-4 object-cover">
-      <h2 class="text-2xl font-semibold mb-1">{{ user.username }}</h2>
-      <p class="text-gray-600 mb-2">{{ user.profile.full_name }}</p>
-      <p class="text-gray-500 text-sm mb-4">{{ user.profile.bio }}</p>
+      <img src="{% if user.profile.avatar %}{{ user.profile.avatar.url }}{% else %}https://via.placeholder.com/128x128?text=No+Image{% endif %}" alt="Profile Picture" class="w-32 h-32 rounded-full mb-4 object-cover border-2 border-gray-200">
+      <h2 class="text-2xl font-semibold mb-1">{{ user.get_full_name|default:user.username }}</h2>
+      <p class="text-gray-600 mb-2">{{ user.email }}</p>
+      {% if user.profile.bio %}
+        <p class="text-gray-500 text-sm mb-2">{{ user.profile.bio }}</p>
+      {% endif %}
+      {% if user.profile.date_of_birth %}
+        <p class="text-gray-500 text-sm mb-2">Born: {{ user.profile.date_of_birth|date:"M d, Y" }}</p>
+      {% endif %}
+      {% if user.profile.medical_condition %}
+        <div class="text-gray-500 text-sm mb-4 p-2 bg-yellow-50 rounded">
+          <strong>Medical Notes:</strong> {{ user.profile.medical_condition }}
+        </div>
+      {% endif %}
       <div class="flex space-x-4">
-        <a href="{% url 'yoga:edit_profile' %}" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">Edit Profile</a>
-        <!-- <a href="{% url 'yoga:logout' %}" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg">Logout</a> -->
+        <a href="{% url 'yoga:edit_profile' %}" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition duration-200">Edit Profile</a>
       </div>
+    </div>
+  </div>
+
+  <!-- Stats Panel -->
+  <div class="bg-white shadow rounded-lg p-6 mt-8">
+    <h3 class="text-xl font-semibold text-gray-900 mb-4">Your Yoga Stats</h3>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="text-center">
+        <div class="text-2xl font-bold text-green-600">0</div>
+        <p class="text-sm text-gray-600">Total Sessions</p>
+      </div>
+      <div class="text-center">
+        <div class="text-2xl font-bold text-blue-600">0%</div>
+        <p class="text-sm text-gray-600">Avg Accuracy</p>
+      </div>
+      <div class="text-center">
+        <div class="text-2xl font-bold text-purple-600">0 hrs</div>
+        <p class="text-sm text-gray-600">Total Time</p>
+      </div>
+      <div class="text-center">
+        <div class="text-2xl font-bold text-orange-600">0 days</div>
+        <p class="text-sm text-gray-600">Best Streak</p>
+      </div>
+    </div>
+    <div class="mt-4 text-center border-t pt-4">
+      <div class="text-lg font-bold text-indigo-600">0s</div>
+      <p class="text-sm text-gray-600">Longest Correct Pose Time</p>
     </div>
   </div>
 
@@ -102,8 +138,11 @@
                         <p class="text-gray-700 font-medium">Longest Streak</p>
                     </div>
                     
-                </div>
-            </div>
+                    <!-- Longest Continuous Time -->
+                    <div class="bg-gradient-to-br from-indigo-50 to-indigo-100 p-4 rounded-lg border border-indigo-200 text-center">
+                        <h4 id="longestContinuous" class="text-3xl font-bold text-indigo-700">0s</h4>
+                        <p class="text-gray-700 font-medium">Longest Correct Pose Time</p>
+                    </div>
 <!-- <h4 id="totalSessions" class="text-3xl font-bold text-blue-700">0</h4>
 <h4 id="avgAccuracy" class="text-3xl font-bold text-green-700">0%</h4>
 <h4 id="totalHours" class="text-3xl font-bold text-purple-700">0 hrs</h4>
@@ -127,6 +166,7 @@ async function loadUserStats() {
         document.getElementById('avgAccuracy').textContent = data.avg_accuracy + '%';
         document.getElementById('totalHours').textContent = data.total_hours + ' hrs';
         document.getElementById('longestStreak').textContent = data.longest_streak + ' days';
+        document.getElementById('longestContinuous').textContent = data.longest_continuous_time + 's';
         
         // Update recent sessions
         updateRecentSessions(data.recent_sessions);

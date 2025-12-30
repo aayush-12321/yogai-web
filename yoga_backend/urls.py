@@ -5,7 +5,8 @@ from .views import (
     EndSessionView,
     GetAvailablePosesView,
     SessionHistoryView,
-    UserStatsView
+    UserStatsView,
+    VideoAnalysisView
 )
 
 app_name = 'yoga_backend'
@@ -13,6 +14,9 @@ app_name = 'yoga_backend'
 urlpatterns = [
     # Pose detection
     path('detect/', PoseDetectionView.as_view(), name='pose-detection'),
+    
+    # Video analysis
+    path('analyze_video/', VideoAnalysisView.as_view(), name='video-analysis'),
     
     # Session management
     path('session/start/', StartSessionView.as_view(), name='start-session'),

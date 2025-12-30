@@ -40,7 +40,7 @@ class PoseDetectionView(APIView):
             
             # Get detector and process frame
             detector = get_detector()
-            result = detector.process_frame(frame_data)
+            result = detector.process_frame(frame_data, target_pose)
             
             if not result.get('success'):
                 return Response(result, status=status.HTTP_200_OK)
@@ -274,8 +274,11 @@ class UserStatsView(APIView):
             
             total_hours = total_seconds / 3600  # Convert to hours
             
-            # Calculate longest streak (consecutive days)
+            # Calculate longest streak
             longest_streak = self.calculate_longest_streak(completed_sessions)
+            
+            # Calculate longest continuous correct pose time
+            longest_continuous_time = self.calculate_longest_continuous_time(completed_sessions)
             
             # Get recent sessions
             recent_sessions = completed_sessions.order_by('-started_at')[:5]
@@ -296,6 +299,7 @@ class UserStatsView(APIView):
                 'avg_accuracy': round(avg_accuracy, 1),
                 'total_hours': round(total_hours, 2),
                 'longest_streak': longest_streak,
+                'longest_continuous_time': longest_continuous_time,
                 'recent_sessions': recent_sessions_data
             })
             
@@ -332,3 +336,223 @@ class UserStatsView(APIView):
                 current_streak = 1
         
         return longest_streak
+    
+    def calculate_longest_continuous_time(self, sessions):
+        """Calculate longest continuous time spent in correct pose"""
+        if not sessions.exists():
+            return 0
+        
+        max_continuous_time = 0
+        
+        for session in sessions:
+            # Get all detections for this session
+            detections = session.detections.filter(is_correct=True).order_by('timestamp')
+            
+            if not detections.exists():
+                continue
+            
+            # Calculate continuous correct pose periods
+            current_streak_start = None
+            current_streak_time = 0
+            
+            for detection in detections:
+                if current_streak_start is None:
+                    current_streak_start = detection.timestamp
+                    current_streak_time = 0
+                else:
+                    # Check if this detection is within 2 seconds of the previous one
+                    time_diff = (detection.timestamp - current_streak_start).total_seconds()
+                    if time_diff <= 2.0:  # Assuming detections are ~0.5s apart
+                        current_streak_time = time_diff
+                    else:
+                        # Streak broken, reset
+                        max_continuous_time = max(max_continuous_time, current_streak_time)
+                        current_streak_start = detection.timestamp
+                        current_streak_time = 0
+            
+            # Check the last streak
+            if current_streak_start is not None:
+                max_continuous_time = max(max_continuous_time, current_streak_time)
+        
+        return round(max_continuous_time, 1)  # Return in seconds
+
+
+class VideoAnalysisView(APIView):
+    """
+    API endpoint to analyze uploaded video for yoga pose detection
+    
+    POST /api/yoga/analyze_video/
+    Body: {
+        "video": file,
+        "target_pose": "tree",
+        "user_id": 1  # optional
+    }
+    """
+    
+    def post(self, request):
+        try:
+            # Get uploaded video file
+            video_file = request.FILES.get('video')
+            target_pose = request.POST.get('target_pose') or request.data.get('target_pose')
+            user_id = request.POST.get('user_id') or request.data.get('user_id')
+            
+            logger.info(f"Video analysis request: video_file={video_file}, target_pose={target_pose}, user_id={user_id}")
+            
+            if not video_file:
+                return Response(
+                    {'error': 'No video file provided'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            if not target_pose:
+                return Response(
+                    {'error': 'target_pose is required'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Process the video
+            detector = get_detector()
+            results = self._process_video(video_file, target_pose, user_id)
+            
+            logger.info(f"Video analysis completed: {results}")
+            return Response(results, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"Error in video analysis: {e}")
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    def _process_video(self, video_file, target_pose, user_id):
+        """Process video file and return analysis results"""
+        import tempfile
+        import cv2
+        
+        logger.info(f"Processing video: {video_file.name}, size: {video_file.size}")
+        
+        results = {
+            'target_pose': target_pose,
+            'total_frames': 0,
+            'analyzed_frames': 0,
+            'correct_frames': 0,
+            'average_confidence': 0.0,
+            'predictions': []
+        }
+        
+        confidences = []
+        
+        try:
+            # Save uploaded file to temporary location
+            with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as temp_file:
+                for chunk in video_file.chunks():
+                    temp_file.write(chunk)
+                temp_path = temp_file.name
+            
+            # Open video with OpenCV
+            cap = cv2.VideoCapture(temp_path)
+            
+            if not cap.isOpened():
+                logger.error(f"Could not open video file: {temp_path}")
+                return {'error': 'Could not open video file'}
+            
+            logger.info(f"Video opened successfully: {temp_path}")
+            
+            frame_count = 0
+            analyzed_count = 0
+            max_frames = 100  # Limit to 100 frames max to avoid excessive processing
+            
+            while analyzed_count < max_frames:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                
+                frame_count += 1
+                
+                # Process every 5th frame to balance speed and coverage
+                if frame_count % 5 == 0:
+                    try:
+                        logger.info(f"Processing frame {frame_count}")
+                        # Convert frame to base64 for processing
+                        import base64
+                        _, buffer = cv2.imencode('.jpg', frame)
+                        frame_data = base64.b64encode(buffer).decode('utf-8')
+                        frame_data = f'data:image/jpeg;base64,{frame_data}'
+                        
+                        # Detect pose
+                        result = detector.process_frame(frame_data, target_pose)
+                        
+                        if result.get('success'):
+                            analyzed_count += 1
+                            prediction = {
+                                'frame': frame_count,
+                                'pose': result.get('pose'),
+                                'confidence': result.get('confidence'),
+                                'is_correct': result.get('is_correct'),
+                                'timestamp': frame_count / 30.0  # Assuming 30fps
+                            }
+                            results['predictions'].append(prediction)
+                            
+                            if result.get('is_correct'):
+                                results['correct_frames'] += 1
+                            
+                            confidences.append(result.get('confidence', 0))
+                            
+                    except Exception as e:
+                        logger.error(f"Error processing frame {frame_count}: {e}")
+                        continue
+            
+            cap.release()
+            
+            # Calculate statistics
+            results['total_frames'] = frame_count
+            results['analyzed_frames'] = analyzed_count
+            
+            if confidences:
+                results['average_confidence'] = sum(confidences) / len(confidences)
+            
+            if analyzed_count > 0:
+                results['accuracy'] = (results['correct_frames'] / analyzed_count) * 100
+            else:
+                results['accuracy'] = 0
+            
+            # Create session record if user provided
+            if user_id and analyzed_count > 0:
+                try:
+                    from django.contrib.auth.models import User
+                    user = User.objects.get(id=user_id)
+                    
+                    # Create session
+                    session = YogaSession.objects.create(
+                        user=user,
+                        pose_name=target_pose,
+                        total_frames=analyzed_count,
+                        correct_frames=results['correct_frames'],
+                        accuracy=results['accuracy']
+                    )
+                    
+                    # Create detection records
+                    for pred in results['predictions']:
+                        PoseDetection.objects.create(
+                            session=session,
+                            predicted_pose=pred['pose'],
+                            confidence=pred['confidence'],
+                            is_correct=pred['is_correct']
+                        )
+                    
+                    results['session_id'] = session.id
+                    
+                except User.DoesNotExist:
+                    logger.warning(f"User {user_id} not found")
+                except Exception as e:
+                    logger.error(f"Error creating session: {e}")
+            
+            # Clean up temp file
+            import os
+            os.unlink(temp_path)
+            
+        except Exception as e:
+            logger.error(f"Error processing video: {e}")
+            return {'error': str(e)}
+        
+        return results

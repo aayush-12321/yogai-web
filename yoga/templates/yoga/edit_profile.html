@@ -28,16 +28,28 @@
              class="cursor-pointer bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg text-sm shadow transition duration-300 justify-center flex items-center mb-4">
         Change Avatar
       </label>
-    <div>
-      <label class="block text-gray-700 font-medium mb-1 ">Bio</label>
-      {{ form.bio }}
-    </div>
+      
+      <div>
+        <label class="block text-gray-700 font-medium mb-1">Bio</label>
+        {{ form.bio }}
+      </div>
+      
+      <div>
+        <label class="block text-gray-700 font-medium mb-1">Date of Birth</label>
+        {{ form.date_of_birth }}
+      </div>
+      
+      <div>
+        <label class="block text-gray-700 font-medium mb-1">Medical Conditions</label>
+        {{ form.medical_condition }}
+        <p class="text-sm text-gray-500 mt-1">{{ form.medical_condition.help_text }}</p>
+      </div>
 
-    <button type="submit" 
-            class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-medium shadow-md transition duration-300">
-      Save Changes
-    </button>   
-  </form>
+      <button type="submit" 
+              class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-medium shadow-md transition duration-300">
+        Save Changes
+      </button>   
+    </form>
 <!-- Back link   -->
   <p class="text-center mt-6">
     <a href="{% url 'yoga:profile' %}" 

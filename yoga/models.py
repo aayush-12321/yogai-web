@@ -6,6 +6,8 @@ class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     bio = models.TextField(blank=True)
     avatar = models.ImageField(upload_to='static/yoga/images/', blank=True, null=True)
+    date_of_birth = models.DateField(blank=True, null=True)
+    medical_condition = models.TextField(blank=True, help_text="Any medical conditions or injuries that might affect your practice")
 
     def __str__(self):
         return f"{self.user.username} Profile"

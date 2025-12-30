@@ -2,20 +2,95 @@
 {% block title %}Stats - Yoga AI{% endblock %}
 
 {% block content %}
-<h2 class="text-3xl font-bold text-center mb-8">Your Progress</h2>
+<div class="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 py-12">
+  <div class="max-w-6xl mx-auto px-4">
+    <h2 class="text-4xl font-bold text-center mb-12 text-gray-800">Your Progress</h2>
 
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-  <div class="bg-white shadow rounded-lg p-6">
-    <h3 class="text-2xl font-bold text-green-600">{{  total_sessions }}</h3>
-    <p class="text-gray-600">Total Sessions</p>
-  </div>
-  <div class="bg-white shadow rounded-lg p-6">
-    <h3 class="text-2xl font-bold text-green-600">{{ total_hours }}</h3>
-    <p class="text-gray-600">Practice Time (hrs)</p>
-  </div>
-  <div class="bg-white shadow rounded-lg p-6">
-    <h3 class="text-2xl font-bold text-green-600">{{ streak }}</h3>
-    <p class="text-gray-600">Longest Streak (days)</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+      <div class="bg-white shadow-lg rounded-xl p-6 border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+        <div class="flex items-center justify-between mb-4">
+          <div class="p-3 bg-blue-100 rounded-full">
+            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+          </div>
+        </div>
+        <h3 class="text-3xl font-bold text-gray-900 mb-1">{{ total_sessions }}</h3>
+        <p class="text-gray-600 font-medium">Total Sessions</p>
+      </div>
+
+      <div class="bg-white shadow-lg rounded-xl p-6 border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+        <div class="flex items-center justify-between mb-4">
+          <div class="p-3 bg-green-100 rounded-full">
+            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+            </svg>
+          </div>
+        </div>
+        <h3 class="text-3xl font-bold text-gray-900 mb-1">{{ total_hours }}</h3>
+        <p class="text-gray-600 font-medium">Practice Hours</p>
+      </div>
+
+      <div class="bg-white shadow-lg rounded-xl p-6 border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+        <div class="flex items-center justify-between mb-4">
+          <div class="p-3 bg-purple-100 rounded-full">
+            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+          </div>
+        </div>
+        <h3 class="text-3xl font-bold text-gray-900 mb-1">{{ longest_continuous_time }}s</h3>
+        <p class="text-gray-600 font-medium">Longest Correct Pose</p>
+      </div>
+
+      <div class="bg-white shadow-lg rounded-xl p-6 border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+        <div class="flex items-center justify-between mb-4">
+          <div class="p-3 bg-orange-100 rounded-full">
+            <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+            </svg>
+          </div>
+        </div>
+        <h3 class="text-3xl font-bold text-gray-900 mb-1">{{ streak }}</h3>
+        <p class="text-gray-600 font-medium">Day Streak</p>
+      </div>
+    </div>
+
+    <!-- Recent Sessions -->
+    <div class="bg-white shadow-lg rounded-xl p-8 border border-gray-100">
+      <h3 class="text-2xl font-bold text-gray-900 mb-6">Recent Sessions</h3>
+      {% if recent_sessions %}
+        <div class="space-y-4">
+          {% for session in recent_sessions %}
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+              <div class="flex items-center space-x-4">
+                <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                  <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                  </svg>
+                </div>
+                <div>
+                  <h4 class="font-semibold text-gray-900 capitalize">{{ session.pose }}</h4>
+                  <p class="text-sm text-gray-600">{{ session.date }} at {{ session.time }}</p>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-lg font-bold text-gray-900">{{ session.accuracy }}%</div>
+                <div class="text-sm text-gray-600">{{ session.duration }}</div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="text-center py-12">
+          <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+          </svg>
+          <h4 class="text-lg font-medium text-gray-900 mb-2">No sessions yet</h4>
+          <p class="text-gray-600">Start practicing to see your progress here!</p>
+        </div>
+      {% endif %}
+    </div>
   </div>
 </div>
 {% endblock %}

@@ -3,7 +3,7 @@ from django.contrib.auth import login, authenticate , logout
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from .forms import SignUpForm, ProfileForm, PracticeForm
-from .models import Pose, Practice
+from .models import Pose, Practice, Profile
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 from django.utils import timezone
@@ -25,12 +25,16 @@ def poses_view(request):
 
 def signup_view(request):
     if request.method == 'POST':
-        form = SignUpForm(request.POST)
+        form = SignUpForm(request.POST, request.FILES)
         if form.is_valid():
             user = form.save()
-            # create profile
-            from .models import Profile
-            Profile.objects.create(user=user)
+            # create profile with additional fields
+            Profile.objects.create(
+                user=user,
+                date_of_birth=form.cleaned_data.get('date_of_birth'),
+                medical_condition=form.cleaned_data.get('medical_condition'),
+                avatar=form.cleaned_data.get('avatar')
+            )
             login(request, user)
             return redirect('yoga:profile')
     else:
@@ -192,7 +196,10 @@ def practice_dates_json(request):
 
 @login_required
 def session_view(request):
-    return render(request, "yoga/session.html")
+    return render(request, "yoga/session.html", {
+        'user': request.user,
+        'user_id': request.user.id
+    })
 
 
 @login_required
