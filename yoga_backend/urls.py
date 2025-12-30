@@ -6,7 +6,8 @@ from .views import (
     GetAvailablePosesView,
     SessionHistoryView,
     UserStatsView,
-    VideoAnalysisView
+    VideoAnalysisView,
+    ModelStatusView
 )
 
 app_name = 'yoga_backend'
@@ -28,4 +29,5 @@ urlpatterns = [
     
     # Utility
     path('poses/', GetAvailablePosesView.as_view(), name='available-poses'),
+    path('model_status/', ModelStatusView.as_view(), name='model-status'),
 ]

@@ -13,7 +13,7 @@
         <div class="bg-white rounded-lg shadow-lg overflow-hidden">
           <div class="aspect-video bg-gray-900 relative">
             <video id="webcam" autoplay muted playsinline class="w-full h-full object-cover" controls></video>
-            <canvas id="canvas" class="hidden"></canvas>
+            <canvas id="canvas" class="absolute inset-0 w-full h-full" style="background: transparent;"></canvas>
             
             <div id="overlay" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
               <div class="text-center text-white">
@@ -122,7 +122,7 @@
         <div id="targetPoseCard" class="bg-gradient-to-br from-green-50 to-blue-50 rounded-lg shadow-lg p-6 hidden">
           <h3 class="text-lg font-semibold text-gray-900 mb-3">Target Pose</h3>
           <div class="text-center">
-            <div id="targetPoseName" class="text-xl font-bold text-green-700 mb-2">Tree Pose</div>
+            <div id="targetPoseName" class="text-xl font-bold text-green-700 mb-2">Pose Detection</div>
             <div class="text-sm text-gray-600">Hold this pose for best results</div>
           </div>
         </div>
@@ -130,6 +130,14 @@
     </div>
   </div>
 </div>
+
+<!-- MediaPipe Scripts -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script> -->
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
 
 <!-- JavaScript -->
 <script>
@@ -144,7 +152,8 @@ let sessionTime = 0;
 let timerInterval = null;
 let detectionInterval = null;
 let sessionId = null;
-let targetPose = null;
+let targetPose = {% if selected_pose %}'{{ selected_pose }}'{% else %}null{% endif %};
+console.log('Initial targetPose:', targetPose);
 let currentCameraFacing = 'user';
 let totalFrames = 0;
 let correctFrames = 0;
@@ -152,9 +161,265 @@ let isVideoMode = false;  // NEW: Track if in video upload mode
 let uploadedVideo = null;  // NEW: Store uploaded video element
 let uploadedFile = null;  // NEW: Store uploaded file for server analysis
 
+// // MediaPipe Pose initialization
+// let pose = null;
+// let camera = null;
+
+// async function initPose() {
+//     pose = new Pose({
+//         locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+//     });
+    
+//     pose.setOptions({
+//         modelComplexity: 1,
+//         smoothLandmarks: true,
+//         enableSegmentation: false,
+//         minDetectionConfidence: 0.5,
+//         minTrackingConfidence: 0.5
+//     });
+    
+//     pose.onResults(onPoseResults);
+//     console.log('MediaPipe Pose initialized');
+// }
+
+// // Draw landmarks on canvas while maintaining video aspect ratio
+// function onPoseResults(results) {
+//     if (!sessionActive) return;
+    
+//     const ctx = canvasEl.getContext('2d');
+//     ctx.save();
+    
+//     // Clear canvas for transparency (video shows through)
+//     ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+    
+//     // Draw pose landmarks if detected
+//     if (results.poseLandmarks) {
+//         // Scale landmarks to canvas coordinates
+//         const scaledLandmarks = results.poseLandmarks.map(landmark => ({
+//             x: landmark.x * canvasEl.width,
+//             y: landmark.y * canvasEl.height,
+//             z: landmark.z,
+//             visibility: landmark.visibility
+//         }));
+        
+//         // Draw pose connections
+//         drawConnectors(ctx, scaledLandmarks, POSE_CONNECTIONS, {
+//             color: '#00FF00',
+//             lineWidth: 2
+//         });
+        
+//         // Draw pose landmarks
+//         drawLandmarks(ctx, scaledLandmarks, {
+//             color: '#FF0000',
+//             lineWidth: 1,
+//             radius: 2
+//         });
+//     }
+    
+//     ctx.restore();
+// }
+// //////////////////////////////
+
+const videoEl = document.getElementById('webcam');
+const canvasEl = document.getElementById('canvas');
+// const ctx = canvasEl.getContext('2d');
+const btn = document.getElementById('toggleSession');
+
+let detectionActive = false;
+let pose = null;
+let videoStream = null; // Track the stream here
+
+// 1. Initialize MediaPipe Pose
+pose = new Pose({
+  locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+});
+
+pose.setOptions({
+  modelComplexity: 1,
+  smoothLandmarks: true,
+  minDetectionConfidence: 0.5,
+  minTrackingConfidence: 0.5
+});
+
+pose.onResults(onResults);
+
+function onResults(results) {
+  if (!detectionActive) return; // Guard to prevent drawing after stop
+
+  canvasEl.width = results.image.width;
+  canvasEl.height = results.image.height;
+
+  ctx.save();
+  ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+  ctx.drawImage(results.image, 0, 0, canvasEl.width, canvasEl.height);
+
+  if (results.poseLandmarks) {
+    drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS, {
+      color: '#00FF00', lineWidth: 4
+    });
+    drawLandmarks(ctx, results.poseLandmarks, {
+      color: '#FF0000', lineWidth: 2, radius: 4
+    });
+  }
+  ctx.restore();
+}
+
+async function detectPose() {
+  if (!detectionActive) return;
+  // If video is playing and ready
+  if (videoEl.readyState >= 2) {
+    await pose.send({ image: videoEl });
+  }
+  requestAnimationFrame(detectPose);
+}
+
+// 2. Toggle Logic (Start / Stop)
+btn.addEventListener('click', async () => {
+  if (!detectionActive) {
+    // START LOGIC
+    try {
+      videoStream = await navigator.mediaDevices.getUserMedia({ 
+        video: { width: 640, height: 480 } 
+      });
+      videoEl.srcObject = videoStream;
+      
+      videoEl.onloadeddata = () => {
+        detectionActive = true;
+        btn.innerText = "Stop Session";
+        btn.style.backgroundColor = "#ff4444"; // Visual cue
+        detectPose();
+      };
+    } catch (err) {
+      console.error("Webcam access denied:", err);
+    }
+  } else {
+    // STOP LOGIC
+    detectionActive = false;
+    
+    // Stop all hardware tracks
+    if (videoStream) {
+      videoStream.getTracks().forEach(track => track.stop());
+    }
+    
+    // Clean up
+    videoEl.srcObject = null;
+    ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+    
+    btn.innerText = "Start Session";
+    btn.style.backgroundColor = "";
+  }
+});
+
+// const videoEl = document.getElementById('webcam');
+//     const canvasEl = document.getElementById('canvas');
+//     // const ctx = canvasEl.getContext('2d');
+//     const btn = document.getElementById('toggleSession');
+
+//     let detectionActive = false;
+//     let pose = null;
+
+//     // 1. Initialize MediaPipe Pose
+//     pose = new Pose({
+//       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+//     });
+
+//     pose.setOptions({
+//       modelComplexity: 1,
+//       smoothLandmarks: true,
+//       minDetectionConfidence: 0.5,
+//       minTrackingConfidence: 0.5
+//     });
+
+//     // 2. This function runs every time the AI finds a pose
+//     pose.onResults(onResults);
+
+//     function onResults(results) {
+//       // Set canvas size to match video feed
+//       canvasEl.width = results.image.width;
+//       canvasEl.height = results.image.height;
+
+//       ctx.save();
+//       ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+
+//       // Draw the webcam frame
+//       ctx.drawImage(results.image, 0, 0, canvasEl.width, canvasEl.height);
+
+//       if (results.poseLandmarks) {
+//         // DRAW THE SKELETON (The lines)
+//         // POSE_CONNECTIONS is a constant provided by drawing_utils.js
+//         drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS, {
+//           color: '#00FF00',
+//           lineWidth: 4
+//         });
+
+//         // DRAW THE LANDMARKS (The points)
+//         drawLandmarks(ctx, results.poseLandmarks, {
+//           color: '#FF0000',
+//           lineWidth: 2,
+//           radius: 4
+//         });
+//       }
+//       ctx.restore();
+//     }
+
+//     // 3. Setup Webcam and Detection Loop
+//     async function detectPose() {
+//       if (!detectionActive) return;
+//       await pose.send({ image: videoEl });
+//       requestAnimationFrame(detectPose);
+//     }
+
+//     btn.addEventListener('click', async () => {
+//       if (!detectionActive) {
+//         try {
+//           const stream = await navigator.mediaDevices.getUserMedia({ 
+//             video: { width: 640, height: 480 } 
+//           });
+//           videoEl.srcObject = stream;
+          
+//           videoEl.onloadeddata = () => {
+//             detectionActive = true;
+//             btn.innerText = "Tracking Active";
+//             detectPose();
+//           };
+//         } catch (err) {
+//           console.error("Error accessing webcam: ", err);
+//           alert("Could not access webcam.");
+//         }
+//       }
+//     });
+
+
+
+
+
+
+
+
+
+
+
+// //////////////////////////////
+// Start pose detection loop
+function startPoseDetection() {
+    if (!pose) return;
+    
+    async function detect() {
+        if (sessionActive && videoEl.readyState >= 2) {
+            try {
+                await pose.send({ image: videoEl });
+            } catch (error) {
+                console.error('Pose detection error:', error);
+            }
+        }
+        requestAnimationFrame(detect);
+    }
+    detect();
+}
+
 // DOM Elements
-const videoEl = document.getElementById("webcam");
-const canvasEl = document.getElementById("canvas");
+// const videoEl = document.getElementById("webcam");
+// const canvasEl = document.getElementById("canvas");
 const ctx = canvasEl.getContext('2d');
 const toggleBtn = document.getElementById("toggleSession");
 const overlay = document.getElementById("overlay");
@@ -214,9 +479,18 @@ async function startWebcam() {
     
     // Setup canvas size when video loads
     return new Promise((resolve, reject) => {
-        videoEl.addEventListener('loadedmetadata', () => {
+        videoEl.addEventListener('loadedmetadata', async () => {
             canvasEl.width = videoEl.videoWidth || 640;
             canvasEl.height = videoEl.videoHeight || 480;
+            
+            // Initialize pose detection if not already done
+            if (!pose) {
+                await initPose();
+            }
+            
+            // Start pose detection loop
+            startPoseDetection();
+            
             resolve(true);
         }, { once: true });
         
@@ -252,8 +526,13 @@ switchCameraBtn.addEventListener("click", async () => {
 
 // Start backend session
 async function startBackendSession() {
-    // Default pose - you can change this or make it dynamic later
-    const defaultPose = 'tree';
+    // Use the targetPose set from URL, or show error if not set
+    const poseToUse = targetPose;
+    
+    if (!poseToUse) {
+        showFeedback("No pose selected. Please select a pose first.", "error");
+        return false;
+    }
     
     try {
         const response = await fetch(`${API_BASE_URL}/session/start/`, {
@@ -262,7 +541,7 @@ async function startBackendSession() {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCsrfToken()
             },
-            body: JSON.stringify({ pose: defaultPose })
+            body: JSON.stringify({ pose: poseToUse })
         });
         
         const data = await response.json();
@@ -322,8 +601,12 @@ async function detectPose() {
             return;
         }
         
-        // Draw current frame to canvas
-        ctx.drawImage(videoEl, 0, 0, canvasEl.width, canvasEl.height);
+        // For webcam mode, MediaPipe handles the canvas drawing
+        // For video upload mode, we need to draw the current frame
+        if (isVideoMode && uploadedVideo) {
+            ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+            ctx.drawImage(videoEl, 0, 0, canvasEl.width, canvasEl.height);
+        }
         
         // Convert to base64
         const frameData = canvasEl.toDataURL('image/jpeg', 0.7);
@@ -730,6 +1013,11 @@ videoUploadInput.addEventListener('change', async (event) => {
         uploadedFile = file;  // Store the original file for upload
         isVideoMode = true;
         
+        // Initialize pose detection for video landmarks
+        if (!pose) {
+            await initPose();
+        }
+        
         // Hide overlay and show video
         overlay.classList.add("hidden");
         
@@ -784,7 +1072,8 @@ async function processUploadedVideo() {
     
     // Set default target pose if not set
     if (!targetPose) {
-        targetPose = 'tree';
+        showFeedback("Please select a pose before uploading a video.", "error");
+        return;
     }
     
     showFeedback("Uploading video for analysis...", "info");
@@ -803,7 +1092,7 @@ async function processUploadedVideo() {
         // Create form data
         const formData = new FormData();
         formData.append('video', uploadedFile);
-        formData.append('target_pose', targetPose || 'tree');
+        formData.append('target_pose', targetPose);
         if (userId) {
             formData.append('user_id', userId);
         }
@@ -980,6 +1269,51 @@ removeVideoBtn.addEventListener('click', async () => {
     
     // Clear video mode
     clearVideoMode();
+});
+
+
+
+
+//sound
+// const startBtn = document.getElementById('toggleSession');
+
+// startBtn.addEventListener('click', function() {
+//     // Stop any previous speech
+//     speechSynthesis.cancel();
+
+//     const message = "Please perform the selected pose carefully. Wear fitting clothes, not baggy ones. Consider your health condition and any injuries. If you feel any pain while doing yoga poses, stop immediately. Do yoga in good lighting. Your full body should be visible to the camera.";
+//     const utterance = new SpeechSynthesisUtterance(message);
+//     utterance.lang = 'en-US';
+//     speechSynthesis.speak(utterance);
+// });
+
+// // Stop speech if any other button is clicked
+// document.querySelectorAll('button').forEach(button => {
+//     if (button.id !== 'toggleSession') { // exclude the start session button
+//         button.addEventListener('click', () => {
+//             speechSynthesis.cancel(); // stop any ongoing speech
+//         });
+//     }
+// });
+const startBtn = document.getElementById('toggleSession');
+
+startBtn.addEventListener('click', function(e) {
+    // stop propagation so the document-level click doesn't trigger immediately
+    e.stopPropagation(); 
+    
+    speechSynthesis.cancel();
+
+    const message = "Please perform the selected pose carefully...";
+    const utterance = new SpeechSynthesisUtterance(message);
+    utterance.lang = 'en-US';
+    speechSynthesis.speak(utterance);
+});
+
+// One listener for everything else
+document.addEventListener('click', (e) => {
+    if (e.target !== startBtn) {
+        speechSynthesis.cancel();
+    }
 });
 </script>
 {% endblock %}

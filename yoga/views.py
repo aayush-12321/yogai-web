@@ -19,27 +19,67 @@ def landing(request):
 
 def poses_view(request):
     poses = Pose.objects.all()[:8]  # show first 8
+    
+    # Add pose_slug to each pose for URL generation
+    pose_name_mapping = {
+        'plank': 'plank',
+        'mountain': 'mountain', 
+        'warrior2': 'warrior2',
+        'warrior ii': 'warrior2',
+        'warrior': 'warrior2',
+    }
+    
+    for pose in poses:
+        pose_title_lower = pose.title.lower()
+        # Try to find a matching pose name
+        pose.pose_slug = None
+        for key in pose_name_mapping:
+            if key in pose_title_lower:
+                pose.pose_slug = pose_name_mapping[key]
+                break
+        # If no match found, try to create slug from title
+        if not pose.pose_slug:
+            pose.pose_slug = pose_title_lower.replace(' pose', '').replace(' ', '')
+        
+        # Ensure we have a valid slug
+        if pose.pose_slug not in ['plank', 'mountain', 'warrior2']:
+            pose.pose_slug = 'plank'  # default fallback
+    
     return render(request, 'yoga/poses.html', {'poses': poses})
 
+
+
+# def signup_view(request):
+#     if request.method == 'POST':
+#         form = SignUpForm(request.POST, request.FILES)
+#         if form.is_valid():
+#             user = form.save()
+#             # create profile with additional fields
+#             Profile.objects.create(
+#                 user=user,
+#                 date_of_birth=form.cleaned_data.get('date_of_birth'),
+#                 medical_condition=form.cleaned_data.get('medical_condition'),
+#                 avatar=form.cleaned_data.get('avatar')
+#             )
+#             login(request, user)
+#             return redirect('yoga:profile')
+#     else:
+#         form = SignUpForm()
+#     return render(request, 'yoga/signup.html', {'form': form})
 
 
 def signup_view(request):
     if request.method == 'POST':
         form = SignUpForm(request.POST, request.FILES)
         if form.is_valid():
-            user = form.save()
-            # create profile with additional fields
-            Profile.objects.create(
-                user=user,
-                date_of_birth=form.cleaned_data.get('date_of_birth'),
-                medical_condition=form.cleaned_data.get('medical_condition'),
-                avatar=form.cleaned_data.get('avatar')
-            )
+            user = form.save()  # This also saves the Profile
             login(request, user)
             return redirect('yoga:profile')
     else:
         form = SignUpForm()
+    
     return render(request, 'yoga/signup.html', {'form': form})
+
 
 from django.contrib.auth.views import LoginView, LogoutView
 class CustomLoginView(LoginView):
@@ -195,10 +235,11 @@ def practice_dates_json(request):
 
 
 @login_required
-def session_view(request):
+def session_view(request, pose=None):
     return render(request, "yoga/session.html", {
         'user': request.user,
-        'user_id': request.user.id
+        'user_id': request.user.id,
+        'selected_pose': pose
     })
 
 

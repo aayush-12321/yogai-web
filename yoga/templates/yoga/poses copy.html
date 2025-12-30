@@ -1,0 +1,48 @@
+{% extends "yoga/base.html" %}
+{% block title %}Pose Library{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 p-4">
+  <div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">Pose Library</h1>
+      <p class="text-gray-600">Choose a pose to start guided practice</p>
+    </div>
+
+    <!-- Grid of Poses -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for pose in poses %}
+      <div class="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-200">
+        
+        <!-- Pose Image/Emoji -->
+        <img src="{{ pose.image.url }}" alt="pose img" class="h-50 bg-gradient-to-br from-green-100 to-blue-100 flex items-center justify-center">
+          <!-- <span class="text-6xl"></span> -->
+        </img>
+
+        <!-- Pose Info -->
+        <div class="p-6">
+          <h3 class="text-xl font-semibold text-gray-900 mb-2">{{ pose.title }}</h3>
+
+          <div class="flex justify-between items-center mb-4">
+            <span class="px-2 py-1 rounded-full text-xs font-medium
+              {% if pose.difficulty == 'Beginner' %} bg-green-100 text-green-800
+              {% elif pose.difficulty == 'Intermediate' %} bg-yellow-100 text-yellow-800
+              {% else %} bg-red-100 text-red-800 {% endif %}">
+              {{ pose.difficulty }}
+            </span>
+            <span class="text-sm text-gray-500">{{ pose.duration_minutes }} minutes</span>
+          </div>
+
+          <!-- Start Button -->
+          <a href="{% url 'yoga:session_with_pose' pose.pose_slug %}"
+             class="block text-center w-full bg-gradient-to-r from-green-500 to-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:from-green-600 hover:to-blue-700 transition-all duration-200">
+            Start Practice
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

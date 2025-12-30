@@ -16,5 +16,6 @@ urlpatterns = [
     path('add_practice/', views.add_practice, name='add_practice'),
     path('stats/', views.stats_view, name='stats'),
     path("session/", views.session_view, name="session"),
+    path("session/<str:pose>/", views.session_view, name="session_with_pose"),
     path('api/practice_dates/', views.practice_dates_json, name='practice_dates_json'),
 ]

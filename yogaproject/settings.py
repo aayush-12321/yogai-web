@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'yoga',
+    'widget_tweaks',
 
     # Third party apps
     'rest_framework',
@@ -127,6 +128,7 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'yoga' / 'static']
 LOGIN_REDIRECT_URL = 'yoga:profile'
 LOGOUT_REDIRECT_URL = 'yoga:landing.html'
+LOGIN_URL = '/login/'
 
 
 # Default primary key field type
