@@ -433,6 +433,34 @@ class YogaPoseDetector:
             "warrior2": [0,2,5,11,12,13,14,19,20,23,24,25,26,29,30,31,32]
         }
 
+        self.label_maps = {
+        "plank": {
+            0: "correct",
+            1: "high_back",
+            2: "low_back"
+        },
+        "mountain": {
+            0: "correct",
+            # 1: "leaning_forward",
+            # 2: "leaning_backward"
+        },
+        "warrior2": {
+            0: "correct",
+            # 1: "front_knee_not_bent",
+            # 2: "arms_not_horizontal"
+        }}
+
+        self.feedback_map = {
+            "plank": {
+                "high_back": "Lower your hips",
+                "low_back": "Raise your hips",
+                "correct": "Good plank!"
+            }
+        }
+
+        self.debug_counter = 0
+
+
         self.load_models()
 
     def load_models(self):
@@ -441,6 +469,8 @@ class YogaPoseDetector:
         """
         from django.conf import settings
         import pickle
+
+        # logger.info(f"{self.pose} classes: {self.models[self.pose].classes_}")
 
         base_dir = settings.BASE_DIR
 
@@ -461,12 +491,19 @@ class YogaPoseDetector:
         results = self.pose.process(rgb)
 
         if not results.pose_landmarks:
+            # print("❌ No pose detected")
             return None
+
+        # print("✅ Pose detected")
+        # for i, lm in enumerate(results.pose_landmarks.landmark[:5]):
+        #     print(f"LM {i}: x={lm.x:.3f}, y={lm.y:.3f}, z={lm.z:.3f}, vis={lm.visibility:.3f}")
 
         points = []
         for idx in self.pose_landmarks[pose_type]:
             lm = results.pose_landmarks.landmark[idx]
             points.extend([lm.x, lm.y, lm.z, lm.visibility])
+
+        # print(f"Feature vector length: {len(points)}")
 
         return np.array(points)
 
@@ -474,6 +511,8 @@ class YogaPoseDetector:
         """
         Predict pose probability
         """
+        print("Model input shape:", keypoints.shape)
+
         if target_pose not in self.models:
             # Demo fallback
             confidence = np.random.uniform(0.6, 0.95)
@@ -487,14 +526,35 @@ class YogaPoseDetector:
         model = self.models[target_pose]
         keypoints = keypoints.reshape(1, -1)
 
-        probs = model.predict_proba(keypoints)
-        confidence = float(probs[0][1])
+        probs = model.predict_proba(keypoints)[0]
+        pred_class = int(model.predict(keypoints)[0])
+        confidence = float(probs[pred_class])
+        # confidence = float(probs[0][1])
+
+        label_map = self.label_maps.get(target_pose, {})
+        pred_label = label_map.get(pred_class, "unknown")
+
+        # 🔍 DEBUG PRINTS
+        # self.debug_counter += 1
+        # if self.debug_counter % 30 == 0:
+
+        print(f"\n📌 Pose: {target_pose}")
+        print(f"Predicted class index: {pred_class}")
+        print(f"Predicted label: {pred_label}")
+        print(f"Confidence: {confidence:.3f}")
+        print(f"Probabilities: {probs}")
 
         return {
             "success": True,
-            "pose": target_pose if confidence > 0.75 else "unknown",
+            "pose": target_pose,
+            "prediction": pred_label if confidence > 0.8 else "unknown",
             "confidence": round(confidence, 3),
-            "is_correct": confidence > 0.75
+            "is_correct": pred_label == "correct",
+            "feedback": self.feedback_map[target_pose].get(pred_label, "")
+            # "success": True,
+            # "pose": target_pose if confidence > 0.75 else "unknown",
+            # "confidence": round(confidence, 3),
+            # "is_correct": confidence > 0.75
         }
 
     def process_frame(self, frame_b64, target_pose):
