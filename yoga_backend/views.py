@@ -415,6 +415,7 @@ import tempfile
 import base64
 import os
 
+
 @method_decorator(csrf_exempt, name='dispatch')
 class VideoAnalysisView(APIView):
     """
@@ -489,10 +490,14 @@ class VideoAnalysisView(APIView):
                 if frame_index % FRAME_SKIP != 0:
                     continue
 
-                _, buffer = cv2.imencode(".jpg", frame)
-                frame_b64 = "data:image/jpeg;base64," + base64.b64encode(buffer).decode()
+                # _, buffer = cv2.imencode(".jpg", frame)
+                # frame_b64 = "data:image/jpeg;base64," + base64.b64encode(buffer).decode()
 
-                prediction = detector.process_frame(frame_b64, target_pose)
+                # prediction = detector.process_frame(frame_b64, target_pose)
+
+                prediction = detector.process_raw_frame(frame, target_pose)
+
+
                 if prediction.get("success"):
                     results["analyzed_frames"] += 1
                     results["predictions"].append({
@@ -522,77 +527,6 @@ class VideoAnalysisView(APIView):
 
         return results
 
-    # def process_video(self, video_file, target_pose, detector):
-    #     results = {
-    #         "target_pose": target_pose,
-    #         "total_frames": 0,
-    #         "analyzed_frames": 0,
-    #         "correct_frames": 0,
-    #         "average_confidence": 0,
-    #         "fps": 30.0,
-    #         "predictions": []
-    #     }
-    #     confidences = []
-
-    #     with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp:
-    #         for chunk in video_file.chunks():
-    #             tmp.write(chunk)
-    #         temp_path = tmp.name
-
-    #     cap = cv2.VideoCapture(temp_path)
-    #     if not cap.isOpened():
-    #         os.remove(temp_path)
-    #         return {"error": "Unable to open video"}
-
-    #     fps = cap.get(cv2.CAP_PROP_FPS)
-    #     if not fps or fps <= 0:
-    #         fps = 30.0
-    #     results["fps"] = round(fps, 3)
-
-    #     frame_index = 0
-    #     MAX_FRAMES = 100
-    #     FRAME_SKIP = 5
-
-    #     while cap.isOpened() and results["analyzed_frames"] < MAX_FRAMES:
-    #         ret, frame = cap.read()
-    #         if not ret:
-    #             break
-
-    #         frame_index += 1
-    #         results["total_frames"] += 1
-
-    #         if frame_index % FRAME_SKIP != 0:
-    #             continue
-
-    #         _, buffer = cv2.imencode(".jpg", frame)
-    #         frame_b64 = "data:image/jpeg;base64," + base64.b64encode(buffer).decode()
-
-    #         prediction = detector.process_frame(frame_b64, target_pose)
-    #         if prediction.get("success"):
-    #             results["analyzed_frames"] += 1
-    #             results["predictions"].append({
-    #                 "frame": frame_index,
-    #                 "timestamp_sec": round(frame_index / fps, 3),
-    #                 "prediction": prediction["prediction"],   # ← was prediction["pose"]
-    #                 "confidence": round(prediction["confidence"], 4),
-    #                 "is_correct": prediction["is_correct"],
-    #                 "feedback": prediction.get("feedback", ""),  # ← add this
-    #             })
-    #             confidences.append(prediction["confidence"])
-    #             if prediction["is_correct"]:
-    #                 results["correct_frames"] += 1
-
-    #     cap.release()
-    #     os.remove(temp_path)
-
-    #     if confidences:
-    #         results["average_confidence"] = round(sum(confidences) / len(confidences), 3)
-
-    #     results["accuracy"] = round(
-    #         (results["correct_frames"] / results["analyzed_frames"]) * 100, 2
-    #     ) if results["analyzed_frames"] > 0 else 0
-
-    #     return results
 
 
 
@@ -600,128 +534,114 @@ class VideoAnalysisView(APIView):
 
 
 
-
-###################################################################################
-
-
-# from rest_framework.views import APIView
-# from rest_framework.response import Response
-# from rest_framework import status
-# from django.utils import timezone
-# from .pose_detector import get_detector
-# from .models import YogaSession, PoseDetection
-# import logging
-
-
-
-
-
-
-#! before checking with claude
-# import cv2
-# import tempfile
-# import base64
-# import os
-
-# # logger = logging.getLogger(__name__)
-
-
+# @method_decorator(csrf_exempt, name='dispatch')
 # class VideoAnalysisView(APIView):
 #     """
-#     Analyze uploaded video and return pose predictions + probabilities
+#     Analyze uploaded video and return pose predictions + probabilities.
+#     Each prediction includes timestamp_sec so the frontend can sync
+#     UI updates to video playback position.
 #     """
+#     permission_classes = [AllowAny]
 
 #     def post(self, request):
 #         video_file = request.FILES.get("video")
 #         target_pose = request.POST.get("target_pose")
-
 #         if not video_file:
 #             return Response({"error": "Video file is required"}, status=400)
-
 #         if not target_pose:
 #             return Response({"error": "target_pose is required"}, status=400)
-
 #         detector = get_detector()
 #         result = self.process_video(video_file, target_pose, detector)
-
 #         return Response(result, status=200)
 
 #     def process_video(self, video_file, target_pose, detector):
-#         """
-#         Main video processing logic
-#         """
-
 #         results = {
 #             "target_pose": target_pose,
 #             "total_frames": 0,
-#             "processed_frames": 0,
+#             "analyzed_frames": 0,
 #             "correct_frames": 0,
 #             "average_confidence": 0,
+#             "fps": 30.0,
 #             "predictions": []
 #         }
-
 #         confidences = []
 
-#         # Save uploaded video temporarily
-#         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as temp:
+#         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp:
 #             for chunk in video_file.chunks():
-#                 temp.write(chunk)
-#             temp_path = temp.name
+#                 tmp.write(chunk)
+#             temp_path = tmp.name
 
 #         cap = cv2.VideoCapture(temp_path)
-
 #         if not cap.isOpened():
+#             os.remove(temp_path)
 #             return {"error": "Unable to open video"}
 
+#         fps = cap.get(cv2.CAP_PROP_FPS)
+#         if not fps or fps <= 0:
+#             fps = 30.0
+#         results["fps"] = round(fps, 3)
+
 #         frame_index = 0
-#         MAX_FRAMES = 100          # safety limit
-#         FRAME_SKIP = 5            # process every 5th frame
+#         MAX_FRAMES = 100
+#         FRAME_SKIP = 5
 
-#         while cap.isOpened() and results["processed_frames"] < MAX_FRAMES:
-#             ret, frame = cap.read()
-#             if not ret:
-#                 break
+#         # Swap to static mode for video file processing
+#         import mediapipe as mp
+#         mp_pose = mp.solutions.pose
+#         video_pose = mp_pose.Pose(
+#             static_image_mode=True,
+#             min_detection_confidence=0.5,
+#             min_tracking_confidence=0.5
+#         )
+#         original_pose = detector.pose
+#         detector.pose = video_pose
 
-#             frame_index += 1
-#             results["total_frames"] += 1
+#         try:
+#             while cap.isOpened() and results["analyzed_frames"] < MAX_FRAMES:
+#                 ret, frame = cap.read()
+#                 if not ret:
+#                     break
 
-#             if frame_index % FRAME_SKIP != 0:
-#                 continue
+#                 frame_index += 1
+#                 results["total_frames"] += 1
 
-#             # Convert frame → base64
-#             _, buffer = cv2.imencode(".jpg", frame)
-#             frame_b64 = base64.b64encode(buffer).decode()
-#             frame_b64 = f"data:image/jpeg;base64,{frame_b64}"
+#                 if frame_index % FRAME_SKIP != 0:
+#                     continue
 
-#             prediction = detector.process_frame(frame_b64, target_pose)
+#                 _, buffer = cv2.imencode(".jpg", frame)
+#                 frame_b64 = "data:image/jpeg;base64," + base64.b64encode(buffer).decode()
 
-#             if prediction.get("success"):
-#                 results["processed_frames"] += 1
+#                 prediction = detector.process_frame(frame_b64, target_pose)
+#                 if prediction.get("success"):
+#                     results["analyzed_frames"] += 1
+#                     results["predictions"].append({
+#                         "frame": frame_index,
+#                         "timestamp_sec": round(frame_index / fps, 3),
+#                         "prediction": prediction.get("prediction", "unknown"),
+#                         "confidence": round(prediction["confidence"], 4),
+#                         "is_correct": prediction["is_correct"],
+#                         "feedback": prediction.get("feedback", ""),
+#                     })
+#                     confidences.append(prediction["confidence"])
+#                     if prediction["is_correct"]:
+#                         results["correct_frames"] += 1
 
-#                 results["predictions"].append({
-#                     "frame": frame_index,
-#                     "pose": prediction["pose"],
-#                     "confidence": prediction["confidence"],
-#                     "is_correct": prediction["is_correct"]
-#                 })
+#         finally:
+#             cap.release()
+#             detector.pose = original_pose  # always restore even if error
+#             video_pose.close()
+#             os.remove(temp_path)
 
-#                 confidences.append(prediction["confidence"])
-
-#                 if prediction["is_correct"]:
-#                     results["correct_frames"] += 1
-
-#         cap.release()
-#         os.remove(temp_path)
-
-#         # Statistics
 #         if confidences:
 #             results["average_confidence"] = round(sum(confidences) / len(confidences), 3)
 
-#         if results["processed_frames"] > 0:
-#             results["accuracy"] = round(
-#                 (results["correct_frames"] / results["processed_frames"]) * 100, 2
-#             )
-#         else:
-#             results["accuracy"] = 0
+#         results["accuracy"] = round(
+#             (results["correct_frames"] / results["analyzed_frames"]) * 100, 2
+#         ) if results["analyzed_frames"] > 0 else 0
 
 #         return results
+
+
+
+
+

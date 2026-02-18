@@ -51,8 +51,18 @@ class YogaPoseDetector:
                 "LEFT_FOOT_INDEX","RIGHT_FOOT_INDEX",
             ],
             # Add mountain/warrior2 landmark lists when ready
+            "warrior2": [
+                "NOSE",
+                "LEFT_EYE",       "RIGHT_EYE",
+                "LEFT_SHOULDER",  "RIGHT_SHOULDER",
+                "LEFT_ELBOW",     "RIGHT_ELBOW",
+                "LEFT_INDEX",     "RIGHT_INDEX",
+                "LEFT_HIP",       "RIGHT_HIP",
+                "LEFT_KNEE",      "RIGHT_KNEE",
+                "LEFT_HEEL",      "RIGHT_HEEL",
+                "LEFT_FOOT_INDEX","RIGHT_FOOT_INDEX",
+            ],
             "mountain": [],
-            "warrior2": [],
         }
 
         # Column names for landmark features (matches HEADERS[1:] from training)
@@ -62,13 +72,35 @@ class YogaPoseDetector:
                 for lm in self.pose_landmarks["plank"]
                 for axis in ["x", "y", "z", "v"]
             ],
+
+            "warrior2": [
+                f"{lm.lower()}_{axis}"
+                for lm in self.pose_landmarks["warrior2"]
+                for axis in ["x", "y", "z", "v"]
+            ],
+            "mountain": [
+                f"{lm.lower()}_{axis}"
+                for lm in self.pose_landmarks["mountain"]
+                for axis in ["x", "y", "z", "v"]
+            ],
             # Add others when ready
         }
 
         self.label_maps = {
             "plank": {0: "correct", 1: "high_back", 2: "low_back"},
+            "warrior2": {
+                0: "correct",
+                1: "bent_front_knee",
+                2: "arms_dropped",
+                3: "arms_bent",
+                4: "hips_rotated",
+                5: "back_foot_wrong_angle",
+                6: "leaning_forward",
+                7: "narrow_stance",
+                8: "shoulders_not_aligned",
+            },
             "mountain": {0: "correct"},
-            "warrior2": {0: "correct"},
+
         }
 
         self.feedback_map = {
@@ -76,7 +108,18 @@ class YogaPoseDetector:
                 "high_back": "Lower your hips",
                 "low_back":  "Raise your hips",
                 "correct":   "Good plank!"
-            }
+            },
+             "warrior2": {
+                "correct":               "Great Warrior 2!",
+                "bent_front_knee":       "Bend your front knee more — aim for 90°.",
+                "arms_dropped":          "Raise your arms to shoulder height.",
+                "arms_bent":             "Straighten your arms fully.",
+                "hips_rotated":          "Square your hips to the side.",
+                "back_foot_wrong_angle": "Turn your back foot to about 90°.",
+                "leaning_forward":       "Keep your torso upright — don't lean forward.",
+                "narrow_stance":         "Widen your stance for better stability.",
+                "shoulders_not_aligned": "Align your shoulders over your hips.",
+            },
         }
 
         self.pose_plausibility_checks = {
@@ -129,18 +172,18 @@ class YogaPoseDetector:
             #     },
             # ],
 
-            # "warrior2": [
-            #     {
-            #         # Front knee must be bent
-            #         "compute": lambda lms: min(
-            #             compute_angle_from_landmarks(lms, 23, 25, 27),
-            #             compute_angle_from_landmarks(lms, 24, 26, 28)
-            #         ),
-            #         "min": None,
-            #         "max": 120,
-            #         "feedback": "Bend your front knee more for Warrior 2."
-            #     },
-            # ],
+            "warrior2": [
+                {
+                    # Front knee must be bent
+                    "compute": lambda lms: min(
+                        compute_angle_from_landmarks(lms, 23, 25, 27),
+                        compute_angle_from_landmarks(lms, 24, 26, 28)
+                    ),
+                    "min": None,
+                    "max": 120,
+                    "feedback": "Bend your front knee more for Warrior 2."
+                },
+            ],
         }
 
         self.prediction_threshold = 0.8
@@ -231,7 +274,7 @@ class YogaPoseDetector:
                 (11, 12),
                 (23, 24),
                 (25, 26),
-                (27, 28),
+                (29, 30),
             ],
             "warrior2": [
                 (11, 12),
@@ -274,70 +317,132 @@ class YogaPoseDetector:
         return X_full
 
     def predict_pose(self, keypoints, raw_landmarks, target_pose):
-        is_visible, visibility_feedback = self.is_full_body_visible(raw_landmarks, target_pose)
-        print(f"🔍 Visibility check: {is_visible}, feedback: {visibility_feedback}")
 
+        # 1. Visibility check — same for all poses
+        is_visible, visibility_feedback = self.is_full_body_visible(raw_landmarks, target_pose)
+        if not is_visible:
+            return {
+                "success":    True,
+                "pose":       target_pose,
+                "prediction": "unknown",
+                "confidence": 0.0,
+                "is_correct": False,
+                "feedback":   visibility_feedback
+            }
+
+        # 2. Route to rule-based BEFORE checking self.models
+        if target_pose == "warrior2":
+            return self._predict_warrior2(keypoints, target_pose)
+
+        # 3. Plausibility check — only for ML poses
         is_plausible, plausibility_feedback = self.is_target_pose_plausible(raw_landmarks, target_pose)
-        print(f"🔍 Plausibility check: {is_plausible}, feedback: {plausibility_feedback}")
+        if not is_plausible:
+            return {
+                "success":    True,
+                "pose":       target_pose,
+                "prediction": "unknown",
+                "confidence": 0.0,
+                "is_correct": False,
+                "feedback":   plausibility_feedback
+            }
+
+        # 4. Demo fallback if model not loaded
+        if target_pose not in self.models:
+            return {
+                "success":    True,
+                "pose":       target_pose,
+                "prediction": "unknown",
+                "confidence": 0.0,
+                "is_correct": False,
+                "feedback":   "Model not loaded."
+            }
+
+        # 5. ML prediction
+        model  = self.models[target_pose]
+        X_full = self.build_feature_dataframe(keypoints, target_pose)
+
+        probs      = model.predict_proba(X_full)[0]
+        pred_class = int(model.predict(X_full)[0])
+        confidence = float(probs[pred_class])
+
+        label_map  = self.label_maps.get(target_pose, {})
+        pred_label = label_map.get(pred_class, "unknown")
+
+        print(f"\n📌 Pose: {target_pose} [ml]")
+        print(f"Predicted class: {pred_class} → {pred_label}")
+        print(f"Confidence: {confidence:.3f}, Probabilities: {probs}")
+
+        return {
+            "success":    True,
+            "pose":       target_pose,
+            "prediction": pred_label if confidence >= self.prediction_threshold else "unknown",
+            "confidence": round(confidence, 3),
+            "is_correct": pred_label == "correct",
+            "feedback":   self.feedback_map.get(target_pose, {}).get(pred_label, "")
+        }
+
+
+    def _predict_warrior2(self, keypoints, target_pose):
+        """Rule-based prediction for Warrior 2."""
+        from yoga_backend.angle_utils import classify_warrior2
+
+        cols = self.landmark_columns[target_pose]
+        X    = pd.DataFrame([keypoints], columns=cols)
+        row  = X.iloc[0]
+
+        pred_label, confidence, feedback = classify_warrior2(row)
+
+        print(f"\n📌 Pose: {target_pose} [rule-based]")
+        print(f"Predicted: {pred_label}, Confidence: {confidence:.3f}")
+        print(f"Feedback: {feedback}")
+        warrior2_threshold = 0.6
+
+        return {
+            "success":    True,
+            "pose":       target_pose,
+            # "prediction": pred_label if confidence >= self.prediction_threshold else "unknown",
+            "prediction": pred_label if confidence >= warrior2_threshold else "unknown",
+            "confidence": confidence,
+            "is_correct": pred_label == "correct",
+            "feedback":   feedback
+        }
+    
+
+    def _predict_ml(self, keypoints, target_pose):
+        """ML pipeline-based prediction for plank, mountain etc."""
         if target_pose not in self.models:
             # Demo fallback
             confidence = np.random.uniform(0.6, 0.95)
             return {
-                "success": True,
-                "pose": target_pose,
+                "success":    True,
+                "pose":       target_pose,
+                "prediction": "unknown",
                 "confidence": round(confidence, 3),
-                "is_correct": confidence > 0.75
-            }
-
-        if not self.is_full_body_visible(raw_landmarks, target_pose):
-            return {
-                "success": True,
-                "pose": target_pose,
-                "prediction": "unknown",
-                "confidence": 0.0,
                 "is_correct": False,
-                "feedback": "Make sure your full body is visible to the camera."
+                "feedback":   "Model not loaded — demo mode."
             }
 
-        # Plausibility check using raw MediaPipe landmarks
-        is_plausible, plausibility_feedback = self.is_target_pose_plausible(raw_landmarks, target_pose)
-        if not is_plausible:
-            return {
-                "success": True,
-                "pose": target_pose,
-                "prediction": "unknown",
-                "confidence": 0.0,
-                "is_correct": False,
-                "feedback": plausibility_feedback
-            }
-
-
-
-        model = self.models[target_pose]  # this is the full pipeline
-
-        # Build the full feature DataFrame (landmarks + angles)
+        model  = self.models[target_pose]
         X_full = self.build_feature_dataframe(keypoints, target_pose)
 
-        # Pipeline handles scaling internally
-        probs = model.predict_proba(X_full)[0]
+        probs      = model.predict_proba(X_full)[0]
         pred_class = int(model.predict(X_full)[0])
         confidence = float(probs[pred_class])
 
-        label_map = self.label_maps.get(target_pose, {})
+        label_map  = self.label_maps.get(target_pose, {})
         pred_label = label_map.get(pred_class, "unknown")
 
-        print(f"\n📌 Pose: {target_pose}")
+        print(f"\n📌 Pose: {target_pose} [ml]")
         print(f"Predicted class: {pred_class} → {pred_label}")
-        print(f"Confidence: {confidence:.3f}")
-        print(f"Probabilities: {probs}")
+        print(f"Confidence: {confidence:.3f}, Probabilities: {probs}")
 
         return {
-            "success": True,
-            "pose": target_pose,
+            "success":    True,
+            "pose":       target_pose,
             "prediction": pred_label if confidence >= self.prediction_threshold else "unknown",
             "confidence": round(confidence, 3),
             "is_correct": pred_label == "correct",
-            "feedback": self.feedback_map.get(target_pose, {}).get(pred_label, "")
+            "feedback":   self.feedback_map.get(target_pose, {}).get(pred_label, "")
         }
 
     def process_frame(self, frame_b64, target_pose):
@@ -359,6 +464,26 @@ class YogaPoseDetector:
 
         return self.predict_pose(keypoints, raw_landmarks, target_pose)  # ← pass both
             
+      
+
+    def process_raw_frame(self, frame, target_pose):
+        """
+        Direct frame processing for video files.
+        Avoids JPEG compression + base64 overhead.
+        Does NOT break existing webcam flow.
+        """
+        if frame is None:
+            return {"success": False}
+
+        # keep same resize logic as process_frame for consistency
+        frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5, interpolation=cv2.INTER_AREA)
+
+        keypoints, raw_landmarks = self.extract_keypoints(frame, target_pose)
+
+        if keypoints is None:
+            return {"success": False, "message": "No pose detected"}
+
+        return self.predict_pose(keypoints, raw_landmarks, target_pose)
 
 
 _detector = None
