@@ -134,12 +134,10 @@
 
       <!-- Side Panel -->
       <div class="space-y-6">
-        <!-- <div class="bg-white rounded-lg shadow-lg p-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Targeted Pose</h3> -->
-          <div id=""
-               class="text-3xl font-bold text-center text-green-600">{{ selected_pose|default:"—"|title }}</div>
-        <!-- </div> -->
-
+        
+          <div 
+               class="text-3xl font-bold text-center text-green-600">{{selected_pose|default:"—"|title }}</div>
+        
         <div class="bg-white rounded-lg shadow-lg p-6">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">Session Time</h3>
           <div id="sessionTimer"
@@ -514,72 +512,67 @@ async function sendFrameToBackend() {
 
 // ============================================================
 // SHARED FEEDBACK BUILDER
-// ============================================================
-function applyPoseUI({ prediction, confidence, isCorrect, targetPoseName, backendFeedback, incrementFrames }) {
-    const confPct   = (confidence * 100).toFixed(1);
-    const isUnknown = !prediction || prediction === 'unknown' || confidence < 0.8;
+// // ============================================================
+// function applyPoseUI({ prediction, confidence, isCorrect, targetPoseName, backendFeedback, incrementFrames }) {
+//     const confPct   = (confidence * 100).toFixed(1);
+//     const isUnknown = !prediction || prediction === 'unknown' || confidence < 0.8;
 
-    // What to show as the "Current Pose" label
-    // If unknown/low confidence → "Unknown", else show the mistake label nicely
-    const displayLabel = isUnknown ? 'Unknown' : poseLabelOf(prediction);
-        console.log('applyPoseUI called:', { prediction, confidence, isCorrect });
+//     // What to show as the "Current Pose" label
+//     // If unknown/low confidence → "Unknown", else show the mistake label nicely
+//     const displayLabel = isUnknown ? 'Unknown' : poseLabelOf(prediction);
+//         console.log('applyPoseUI called:', { prediction, confidence, isCorrect });
 
 
-    // ── Current Pose panel ──
-    currentPoseEl.textContent   = displayLabel;
-    confidenceEl.textContent    = confPct;
-    confidenceBarEl.style.width = confPct + '%';
-    confidenceBarEl.className   = 'h-2 rounded-full transition-all duration-500 ' +
-        (confidence >= 0.8 ? 'bg-green-500' : confidence >= 0.5 ? 'bg-yellow-500' : 'bg-red-500');
+//     // ── Current Pose panel ──
+//     currentPoseEl.textContent   = displayLabel;
+//     confidenceEl.textContent    = confPct;
+//     confidenceBarEl.style.width = confPct + '%';
+//     confidenceBarEl.className   = 'h-2 rounded-full transition-all duration-500 ' +
+//         (confidence >= 0.8 ? 'bg-green-500' : confidence >= 0.5 ? 'bg-yellow-500' : 'bg-red-500');
 
-    // ── Status indicator ──
-    if (isCorrect && confidence >= 0.8) {
-        statusIcon.className   = 'w-3 h-3 rounded-full bg-green-500 animate-pulse';
-        statusText.textContent = 'Correct ✓';
-        statusText.className   = 'text-sm font-medium text-green-700';
-        if (incrementFrames) correctFrames++;
-    } else {
-        statusIcon.className   = 'w-3 h-3 rounded-full ' + (isUnknown ? 'bg-yellow-400' : 'bg-red-500');
-        statusText.textContent = isUnknown ? 'Unclear ?' : 'Incorrect ✗';
-        statusText.className   = 'text-sm font-medium ' + (isUnknown ? 'text-yellow-700' : 'text-red-700');
-    }
+//     // ── Status indicator ──
+//     if (isCorrect && confidence >= 0.8) {
+//         statusIcon.className   = 'w-3 h-3 rounded-full bg-green-500 animate-pulse';
+//         statusText.textContent = 'Correct ✓';
+//         statusText.className   = 'text-sm font-medium text-green-700';
+//         if (incrementFrames) correctFrames++;
+//     } else {
+//         statusIcon.className   = 'w-3 h-3 rounded-full ' + (isUnknown ? 'bg-yellow-400' : 'bg-red-500');
+//         statusText.textContent = isUnknown ? 'Unclear ?' : 'Incorrect ✗';
+//         statusText.className   = 'text-sm font-medium ' + (isUnknown ? 'text-yellow-700' : 'text-red-700');
+//     }
 
-    if (incrementFrames) { totalFrames++; updateStats(); }
+//     if (incrementFrames) { totalFrames++; updateStats(); }
 
-    // ── Feedback message ──
-    let msg, type;
-    const tip = backendFeedback ? ` ${backendFeedback}` : '';
+//     // ── Feedback message ──
+//     let msg, type;
+//     const tip = backendFeedback ? ` ${backendFeedback}` : '';
 
-    if (isCorrect && confidence >= 0.8) {
-        // Correct form
-        msg  = `✓ Great form! You are holding ${poseLabelOf(targetPoseName)} correctly. (${confPct}% confidence)`;
-        type = 'success';
-    } else if (isUnknown) {
-        if (confidence === 0) {
-            msg =`⚠ Pose unclear - ${tip || 'try adjusting your position or lighting.'}`;
-        }
-        // Can't tell — either no prediction or confidence too low
-        else if (confidence < 0.5) {
-            msg  = `⚠ Pose unclear — make sure your full body is visible and the lighting is good.`;
-        } 
+//     if (isCorrect && confidence >= 0.8) {
+//         // Correct form
+//         msg  = `✓ Great form! You are holding ${poseLabelOf(targetPoseName)} correctly. (${confPct}% confidence)`;
+//         type = 'success';
+//     } else if (isUnknown) {
+//         if (confidence === 0) {
+//             msg =`⚠ Pose unclear - ${tip || 'try adjusting your position or lighting.'}`;
+//         }
+//         // Can't tell — either no prediction or confidence too low
+//         else if (confidence < 0.5) {
+//             msg  = `⚠ Pose unclear — make sure your full body is visible and the lighting is good.`;
+//         } 
         
-        else {
-            msg  = `⚠ Almost there! Confidence is ${confPct}% — adjust your position slightly.`;
-        }
-        type = 'warning';
-    } else {
-        // Confident but wrong form — show the specific mistake + backend tip
-        msg  = `✗ ${poseLabelOf(prediction)} detected. (${confPct}% confidence)${tip ? ' Tip: ' + tip : ''}`;
-        type = 'error';
-    }
+//         else {
+//             msg  = `⚠ Almost there! Confidence is ${confPct}% — adjust your position slightly.`;
+//         }
+//         type = 'warning';
+//     } else {
+//         // Confident but wrong form — show the specific mistake + backend tip
+//         msg  = `✗ ${poseLabelOf(prediction)} detected. (${confPct}% confidence)${tip ? ' Tip: ' + tip : ''}`;
+//         type = 'error';
+//     }
 
-    showFeedback(msg, type);
-}
-
-// ============================================================
-// DETECTION RESULT HANDLER  (live mode)
-// ============================================================
-
+//     showFeedback(msg, type);
+// }
 
 function applyPoseUI({ prediction, confidence, isCorrect, targetPoseName, backendFeedback, incrementFrames }) {
     const confPct   = (confidence * 100).toFixed(1);
@@ -635,7 +628,9 @@ function applyPoseUI({ prediction, confidence, isCorrect, targetPoseName, backen
     showFeedback(msg, type);
 }
 
-/*
+// ============================================================
+// DETECTION RESULT HANDLER  (live mode)
+// ============================================================
 function handleDetectionResult(result) {
     if (!result.success) {
         currentPoseEl.textContent   = 'No pose detected';
@@ -658,7 +653,7 @@ function handleDetectionResult(result) {
         backendFeedback: result.feedback || '',
         incrementFrames: true,
     });
-}*/
+}
 
 // ============================================================
 // ▶ TOGGLE BUTTON — single handler
