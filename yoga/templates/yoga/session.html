@@ -550,10 +550,15 @@ function applyPoseUI({ prediction, confidence, isCorrect, targetPoseName, backen
         msg  = `✓ Great form! You are holding ${poseLabelOf(targetPoseName)} correctly. (${confPct}% confidence)`;
         type = 'success';
     } else if (isUnknown) {
+        if (confidence === 0) {
+            msg =`⚠ Pose unclear - ${tip || 'try adjusting your position or lighting.'}`;
+        }
         // Can't tell — either no prediction or confidence too low
-        if (confidence < 0.5) {
+        else if (confidence < 0.5) {
             msg  = `⚠ Pose unclear — make sure your full body is visible and the lighting is good.`;
-        } else {
+        } 
+        
+        else {
             msg  = `⚠ Almost there! Confidence is ${confPct}% — adjust your position slightly.`;
         }
         type = 'warning';
