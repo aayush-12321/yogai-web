@@ -509,19 +509,16 @@ async function sendFrameToBackend() {
 
 // ============================================================
 // SHARED FEEDBACK BUILDER
-// Used by both live detection and video playback sync.
-//
-// Backend returns:
-//   result.pose        = target pose name  (e.g. "plank")
-//   result.prediction  = what model saw    ("correct" | "unknown" | wrong-pose-label)
-//   result.confidence  = 0.0 – 1.0
-//   result.is_correct  = prediction === "correct"
-//   result.feedback    = pose-specific tip from feedback_map
 // ============================================================
 function applyPoseUI({ prediction, confidence, isCorrect, targetPoseName, backendFeedback, incrementFrames }) {
-    const confPct     = (confidence * 100).toFixed(1);
-    const isUnknown   = !prediction || prediction === 'unknown' || confidence < 0.8;
+    const confPct   = (confidence * 100).toFixed(1);
+    const isUnknown = !prediction || prediction === 'unknown' || confidence < 0.8;
+
+    // What to show as the "Current Pose" label
+    // If unknown/low confidence → "Unknown", else show the mistake label nicely
     const displayLabel = isUnknown ? 'Unknown' : poseLabelOf(prediction);
+        console.log('applyPoseUI called:', { prediction, confidence, isCorrect });
+
 
     // ── Current Pose panel ──
     currentPoseEl.textContent   = displayLabel;
@@ -549,17 +546,20 @@ function applyPoseUI({ prediction, confidence, isCorrect, targetPoseName, backen
     const tip = backendFeedback ? ` ${backendFeedback}` : '';
 
     if (isCorrect && confidence >= 0.8) {
-        msg  = `✓ Great form! You are holding ${poseLabelOf(targetPoseName)} correctly. (${confPct}% confidence)${tip}`;
+        // Correct form
+        msg  = `✓ Great form! You are holding ${poseLabelOf(targetPoseName)} correctly. (${confPct}% confidence)`;
         type = 'success';
     } else if (isUnknown) {
+        // Can't tell — either no prediction or confidence too low
         if (confidence < 0.5) {
-            msg  = `⚠ Pose unclear — make sure your full body is visible and the lighting is good.${tip}`;
+            msg  = `⚠ Pose unclear — make sure your full body is visible and the lighting is good.`;
         } else {
-            msg  = `⚠ Almost there! Confidence is ${confPct}% — adjust your position to match ${poseLabelOf(targetPoseName)}.${tip}`;
+            msg  = `⚠ Almost there! Confidence is ${confPct}% — adjust your position slightly.`;
         }
         type = 'warning';
     } else {
-        msg  = `✗ Detected: ${displayLabel} — but target is ${poseLabelOf(targetPoseName)}. Fix your form.${tip}`;
+        // Confident but wrong form — show the specific mistake + backend tip
+        msg  = `✗ ${poseLabelOf(prediction)} detected. (${confPct}% confidence)${tip ? ' Tip: ' + tip : ''}`;
         type = 'error';
     }
 
@@ -584,6 +584,7 @@ function handleDetectionResult(result) {
 
     applyPoseUI({
         prediction:      result.prediction,          // "correct" | "unknown" | wrong-label
+        // prediction:      best.prediction ?? best.pose,
         confidence:      result.confidence,
         isCorrect:       result.is_correct,
         targetPoseName:  result.pose,                // target pose name
@@ -720,7 +721,8 @@ toggleBtn.addEventListener('click', async () => {
 
                 // best.pose in video predictions holds the detected label
                 applyPoseUI({
-                    prediction:      best.pose,
+                    // prediction:      best.prediction,
+                    prediction:      best.prediction ?? best.pose,
                     confidence:      best.confidence,
                     isCorrect:       best.is_correct,
                     targetPoseName:  targetPose,

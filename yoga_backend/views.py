@@ -664,10 +664,10 @@ class VideoAnalysisView(APIView):
                 results["predictions"].append({
                     "frame": frame_index,
                     "timestamp_sec": round(frame_index / fps, 3),
-                    "pose": prediction["pose"],
+                    "prediction": prediction["prediction"],   # ← was prediction["pose"]
                     "confidence": round(prediction["confidence"], 4),
                     "is_correct": prediction["is_correct"],
-                    "matches_target": prediction.get("matches_target", prediction["is_correct"]),
+                    "feedback": prediction.get("feedback", ""),  # ← add this
                 })
                 confidences.append(prediction["confidence"])
                 if prediction["is_correct"]:
