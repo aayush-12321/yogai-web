@@ -89,6 +89,64 @@ def compute_knee_angle_warrior2(row, side="left"):
     heel = row[[f"{side}_heel_x", f"{side}_heel_y", f"{side}_heel_z"]].values
     return angle_between_vectors(vector_from_points(hip, knee), vector_from_points(heel, knee))
 
+
+
+# ── Mountain pose angle functions ─────────────────────────────────────────────
+
+def compute_mountain_shoulder_angle(row, side="left"):
+    """Angle at shoulder: hip - shoulder - elbow"""
+    hip      = row[[f"{side}_hip_x",      f"{side}_hip_y",      f"{side}_hip_z"]].values
+    shoulder = row[[f"{side}_shoulder_x", f"{side}_shoulder_y", f"{side}_shoulder_z"]].values
+    elbow    = row[[f"{side}_elbow_x",    f"{side}_elbow_y",    f"{side}_elbow_z"]].values
+    return angle_between_vectors(vector_from_points(hip, shoulder), vector_from_points(elbow, shoulder))
+
+def compute_mountain_elbow_angle(row, side="left"):
+    """Angle at elbow: shoulder - elbow - wrist"""
+    shoulder = row[[f"{side}_shoulder_x", f"{side}_shoulder_y", f"{side}_shoulder_z"]].values
+    elbow    = row[[f"{side}_elbow_x",    f"{side}_elbow_y",    f"{side}_elbow_z"]].values
+    wrist    = row[[f"{side}_wrist_x",    f"{side}_wrist_y",    f"{side}_wrist_z"]].values
+    return angle_between_vectors(vector_from_points(shoulder, elbow), vector_from_points(wrist, elbow))
+
+def compute_mountain_hip_angle(row, side="left"):
+    """Angle at hip: shoulder - hip - knee"""
+    shoulder = row[[f"{side}_shoulder_x", f"{side}_shoulder_y", f"{side}_shoulder_z"]].values
+    hip      = row[[f"{side}_hip_x",      f"{side}_hip_y",      f"{side}_hip_z"]].values
+    knee     = row[[f"{side}_knee_x",     f"{side}_knee_y",     f"{side}_knee_z"]].values
+    return angle_between_vectors(vector_from_points(shoulder, hip), vector_from_points(knee, hip))
+
+def compute_mountain_knee_angle(row, side="left"):
+    """Angle at knee: hip - knee - ankle"""
+    hip   = row[[f"{side}_hip_x",   f"{side}_hip_y",   f"{side}_hip_z"]].values
+    knee  = row[[f"{side}_knee_x",  f"{side}_knee_y",  f"{side}_knee_z"]].values
+    ankle = row[[f"{side}_ankle_x", f"{side}_ankle_y", f"{side}_ankle_z"]].values
+    return angle_between_vectors(vector_from_points(hip, knee), vector_from_points(ankle, knee))
+
+def compute_mountain_head_tilt(row):
+    """
+    Head tilt: angle between ear-to-ear line and horizontal.
+    Uses left_ear and right_ear x,y positions.
+    """
+    left_ear  = np.array([row["left_ear_x"],  row["left_ear_y"]])
+    right_ear = np.array([row["right_ear_x"], row["right_ear_y"]])
+    diff = right_ear - left_ear
+    # Angle from horizontal — 0 = perfectly level head
+    return abs(np.degrees(np.arctan2(diff[1], diff[0])))
+
+def compute_mountain_shoulder_raise(row, side="left"):
+    """
+    Shoulder raise relative to hip.
+    In correct mountain pose shoulders should be relaxed — 
+    large vertical distance = raised shoulders.
+    Normalized by torso height to be distance-independent.
+    """
+    shoulder_y = row[f"{side}_shoulder_y"]
+    hip_y      = row[f"{side}_hip_y"]
+    ear_y      = row[f"{side}_ear_y"] if f"{side}_ear_y" in row.index else row["nose_y"]
+    torso_height = abs(hip_y - ear_y) + 1e-6
+    # shoulder_y < hip_y in MediaPipe (y increases downward)
+    # raised shoulders = shoulder_y closer to ear_y = smaller value
+    return abs(shoulder_y - hip_y) / torso_height
+
 def compute_all_angles(row, pose_type):
     if pose_type == "plank":
         angles = [
@@ -129,6 +187,26 @@ def compute_all_angles(row, pose_type):
             "left_torso_angle", "right_torso_angle",
         ]
         return angles, columns
+    
+    if pose_type == "mountain":
+        angles = [
+            compute_mountain_shoulder_angle(row, "left"),
+            compute_mountain_elbow_angle(row, "left"),
+            compute_mountain_hip_angle(row, "left"),
+            compute_mountain_knee_angle(row, "left"),
+            compute_mountain_shoulder_angle(row, "right"),
+            compute_mountain_elbow_angle(row, "right"),
+            compute_mountain_hip_angle(row, "right"),
+            compute_mountain_knee_angle(row, "right"),
+        ]
+        columns = [
+            "left_shoulder_angle",  "left_elbow_angle",
+            "left_hip_angle",       "left_knee_angle",
+            "right_shoulder_angle", "right_elbow_angle",
+            "right_hip_angle",      "right_knee_angle",
+        ]
+        return angles, columns
+    
     return [], []
 
 
@@ -255,6 +333,108 @@ def classify_warrior2(row):
         return "correct", confidence, "Great Warrior 2!"
 
     # Return the most severe mistake
+    triggered.sort(key=lambda x: x[1], reverse=True)
+    top_label, top_severity, top_feedback = triggered[0]
+    return top_label, top_severity, top_feedback
+
+
+def classify_mountain(row):
+    """
+    for Mountain pose.
+    Returns: (predicted_label, confidence, feedback)
+    """
+
+    # ── Compute all angles ────────────────────────────────────
+    left_shoulder  = compute_mountain_shoulder_angle(row, "left")
+    right_shoulder = compute_mountain_shoulder_angle(row, "right")
+    left_elbow     = compute_mountain_elbow_angle(row, "left")
+    right_elbow    = compute_mountain_elbow_angle(row, "right")
+    left_hip       = compute_mountain_hip_angle(row, "left")
+    right_hip      = compute_mountain_hip_angle(row, "right")
+    left_knee      = compute_mountain_knee_angle(row, "left")
+    right_knee     = compute_mountain_knee_angle(row, "right")
+    head_tilt      = compute_mountain_head_tilt(row)
+    left_shoulder_raise  = compute_mountain_shoulder_raise(row, "left")
+    right_shoulder_raise = compute_mountain_shoulder_raise(row, "right")
+
+    # ── Averages ──────────────────────────────────────────────
+    avg_shoulder        = (left_shoulder  + right_shoulder) / 2
+    avg_elbow           = (left_elbow     + right_elbow)    / 2
+    avg_hip             = (left_hip       + right_hip)      / 2
+    avg_knee            = (left_knee      + right_knee)     / 2
+    avg_shoulder_raise  = (left_shoulder_raise + right_shoulder_raise) / 2
+
+    # ── Distance-independent stance width ─────────────────────
+    shoulder_width  = abs(row["left_shoulder_x"] - row["right_shoulder_x"]) + 1e-6
+    stance_width    = abs(row["left_ankle_x"]    - row["right_ankle_x"])
+    relative_stance = stance_width / shoulder_width
+
+    # ── Debug print — remove after tuning ─────────────────────
+    print(f"\n🏔 Mountain angles:")
+    print(f"  avg_shoulder={avg_shoulder:.1f}  avg_elbow={avg_elbow:.1f}")
+    print(f"  avg_hip={avg_hip:.1f}  avg_knee={avg_knee:.1f}")
+    print(f"  head_tilt={head_tilt:.1f}  avg_shoulder_raise={avg_shoulder_raise:.3f}")
+    print(f"  relative_stance={relative_stance:.2f}")
+
+    
+    
+    rules = [
+        (
+            relative_stance < 0.2,           # ← 0.35 is correct, flag only very narrow
+            "feet_too_close",
+            _normalize(relative_stance, ideal=0.35, worst=0.1),
+            "Stand with your feet slightly apart — about hip-width."
+        ),
+        (
+            avg_shoulder < 10,               # ← 20° is correct, flag only if arms very far forward
+            "arms_dropped",
+            _normalize(avg_shoulder, ideal=20, worst=5),
+            "Let your arms hang naturally at your sides."
+        ),
+        (
+            avg_shoulder_raise < 0.5,        # ← 0.66 is correct, flag if shoulders raised
+            "shoulders_raised",
+            _normalize(avg_shoulder_raise, ideal=0.66, worst=0.35),
+            "Relax your shoulders — drop them away from your ears."
+        ),
+        (
+            avg_hip < 110,                   # ← 137° is correct, flag only big lean forward
+            "leaning_forward",
+            _normalize(avg_hip, ideal=137, worst=90),
+            "Stand tall — don't lean forward."
+        ),
+        (
+            avg_hip > 170,                   # ← flag big lean backward
+            "leaning_back",
+            _normalize(abs(avg_hip - 137), ideal=0, worst=45),
+            "Stand tall — don't lean backward."
+        ),
+        (
+            head_tilt < 165 or head_tilt > 195,  # ← 178° is level, flag big tilts
+            "head_tilted",
+            _normalize(abs(head_tilt - 178), ideal=0, worst=25),
+            "Keep your head level — don't tilt to either side."
+        ),
+    ]
+
+    # ── Evaluate rules ────────────────────────────────────────
+    triggered = [
+        (label, severity, feedback)
+        for condition, label, severity, feedback in rules
+        if condition
+    ]
+
+    if not triggered:
+        all_severities = [
+            _normalize(relative_stance,       ideal=0.35, worst=0.1),
+            _normalize(avg_shoulder,          ideal=20,   worst=5),
+            _normalize(avg_shoulder_raise,    ideal=0.66, worst=0.35),
+            _normalize(abs(avg_hip - 137),    ideal=0,    worst=45),
+            _normalize(abs(head_tilt - 178),  ideal=0,    worst=25),
+        ]
+        confidence = _correct_confidence(all_severities)
+        return "correct", confidence, "Great Mountain pose!"
+
     triggered.sort(key=lambda x: x[1], reverse=True)
     top_label, top_severity, top_feedback = triggered[0]
     return top_label, top_severity, top_feedback

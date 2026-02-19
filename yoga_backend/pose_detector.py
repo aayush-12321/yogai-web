@@ -62,7 +62,18 @@ class YogaPoseDetector:
                 "LEFT_HEEL",      "RIGHT_HEEL",
                 "LEFT_FOOT_INDEX","RIGHT_FOOT_INDEX",
             ],
-            "mountain": [],
+            "mountain": [
+                "NOSE",
+                "LEFT_EAR",       "RIGHT_EAR",
+                "LEFT_SHOULDER",  "RIGHT_SHOULDER",
+                "LEFT_ELBOW",     "RIGHT_ELBOW",
+                "LEFT_WRIST",     "RIGHT_WRIST",
+                "LEFT_INDEX",     "RIGHT_INDEX",
+                "LEFT_HIP",       "RIGHT_HIP",
+                "LEFT_KNEE",      "RIGHT_KNEE",
+                "LEFT_ANKLE",     "RIGHT_ANKLE",
+                "LEFT_HEEL",      "RIGHT_HEEL",
+            ],
         }
 
         # Column names for landmark features (matches HEADERS[1:] from training)
@@ -99,7 +110,15 @@ class YogaPoseDetector:
                 7: "narrow_stance",
                 8: "shoulders_not_aligned",
             },
-            "mountain": {0: "correct"},
+            "mountain": {
+                0: "correct",
+                1: "feet_too_close",
+                2: "arms_dropped",
+                3: "shoulders_raised",
+                4: "leaning_forward",
+                5: "leaning_back",
+                6: "head_tilted",
+            },
 
         }
 
@@ -119,6 +138,15 @@ class YogaPoseDetector:
                 "leaning_forward":       "Keep your torso upright — don't lean forward.",
                 "narrow_stance":         "Widen your stance for better stability.",
                 "shoulders_not_aligned": "Align your shoulders over your hips.",
+            },
+            "mountain": {
+                "correct":          "Great Mountain pose!",
+                "feet_too_close":   "Stand with your feet slightly apart — about hip-width.",
+                "arms_dropped":     "Let your arms hang naturally at your sides.",
+                "shoulders_raised": "Relax your shoulders — drop them away from your ears.",
+                "leaning_forward":  "Stand tall — don't lean forward.",
+                "leaning_back":     "Stand tall — don't lean backward.",
+                "head_tilted":      "Keep your head level — don't tilt to either side.",
             },
         }
 
@@ -333,6 +361,8 @@ class YogaPoseDetector:
         # 2. Route to rule-based BEFORE checking self.models
         if target_pose == "warrior2":
             return self._predict_warrior2(keypoints, target_pose)
+        if target_pose == "mountain":
+            return self._predict_mountain(keypoints, target_pose)
 
         # 3. Plausibility check — only for ML poses
         is_plausible, plausibility_feedback = self.is_target_pose_plausible(raw_landmarks, target_pose)
@@ -380,34 +410,7 @@ class YogaPoseDetector:
             "is_correct": pred_label == "correct",
             "feedback":   self.feedback_map.get(target_pose, {}).get(pred_label, "")
         }
-
-
-    def _predict_warrior2(self, keypoints, target_pose):
-        """Rule-based prediction for Warrior 2."""
-        from yoga_backend.angle_utils import classify_warrior2
-
-        cols = self.landmark_columns[target_pose]
-        X    = pd.DataFrame([keypoints], columns=cols)
-        row  = X.iloc[0]
-
-        pred_label, confidence, feedback = classify_warrior2(row)
-
-        print(f"\n📌 Pose: {target_pose} [rule-based]")
-        print(f"Predicted: {pred_label}, Confidence: {confidence:.3f}")
-        print(f"Feedback: {feedback}")
-        warrior2_threshold = 0.6
-
-        return {
-            "success":    True,
-            "pose":       target_pose,
-            # "prediction": pred_label if confidence >= self.prediction_threshold else "unknown",
-            "prediction": pred_label if confidence >= warrior2_threshold else "unknown",
-            "confidence": confidence,
-            "is_correct": pred_label == "correct",
-            "feedback":   feedback
-        }
     
-
     def _predict_ml(self, keypoints, target_pose):
         """ML pipeline-based prediction for plank, mountain etc."""
         if target_pose not in self.models:
@@ -444,6 +447,58 @@ class YogaPoseDetector:
             "is_correct": pred_label == "correct",
             "feedback":   self.feedback_map.get(target_pose, {}).get(pred_label, "")
         }
+
+
+    def _predict_warrior2(self, keypoints, target_pose):
+        """ prediction for Warrior 2."""
+        from yoga_backend.angle_utils import classify_warrior2
+
+        cols = self.landmark_columns[target_pose]
+        X    = pd.DataFrame([keypoints], columns=cols)
+        row  = X.iloc[0]
+
+        pred_label, confidence, feedback = classify_warrior2(row)
+
+        print(f"\n📌 Pose: {target_pose} -")
+        print(f"Predicted: {pred_label}, Confidence: {confidence:.3f}")
+        print(f"Feedback: {feedback}")
+        warrior2_threshold = 0.6
+
+        return {
+            "success":    True,
+            "pose":       target_pose,
+            # "prediction": pred_label if confidence >= self.prediction_threshold else "unknown",
+            "prediction": pred_label if confidence >= warrior2_threshold else "unknown",
+            "confidence": confidence,
+            "is_correct": pred_label == "correct",
+            "feedback":   feedback
+        }
+    
+    def _predict_mountain(self, keypoints, target_pose):
+        """prediction for Mountain pose."""
+        from yoga_backend.angle_utils import classify_mountain
+
+        cols = self.landmark_columns[target_pose]
+        X    = pd.DataFrame([keypoints], columns=cols)
+        row  = X.iloc[0]
+
+        pred_label, confidence, feedback = classify_mountain(row)
+
+        print(f"\n📌 Pose: {target_pose} -")
+        print(f"Predicted: {pred_label}, Confidence: {confidence:.3f}")
+        print(f"Feedback: {feedback}")
+
+        mountain_threshold = 0.6  # same as warrior2
+
+        return {
+            "success":    True,
+            "pose":       target_pose,
+            "prediction": pred_label if confidence >= mountain_threshold else "unknown",
+            "confidence": confidence,
+            "is_correct": pred_label == "correct",
+            "feedback":   feedback
+        }
+    
 
     def process_frame(self, frame_b64, target_pose):
         import base64

@@ -609,7 +609,11 @@ function applyPoseUI({ prediction, confidence, isCorrect, targetPoseName, backen
     if (isCorrect && !isUnknown) {
         msg  = `✓ Great form! You are holding ${poseLabelOf(targetPoseName)} correctly. (${confPct}% confidence)`;
         type = 'success';
-    } else if (backendFeedback) {
+    } else if (confidence < 0.5 && !isUnknown) {
+        // Predicted something but very low confidence — pose doesn't match well
+        msg  = `⚠ Pose doesn't seem to match — make sure your full body is visible and you're in the correct position.`;
+        type = 'warning';}
+    else if (backendFeedback) {
         // Backend always sends specific feedback — show it
         msg  = `✗ ${backendFeedback}`;
         type = isUnknown ? 'warning' : 'error';
