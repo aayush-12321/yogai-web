@@ -137,6 +137,24 @@
         
           <div 
                class="text-3xl font-bold text-center text-green-600">{{selected_pose|default:"—"|title }}</div>
+
+        <!-- Audio Feedback Toggle -->
+        <button id="audioFeedbackBtn"
+                class="w-full flex items-center justify-between px-4 py-3 
+                    border-2 border-gray-300 rounded-lg text-gray-700 
+                    hover:bg-gray-50 transition-colors bg-white shadow">
+            <div class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2"
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15.536 8.464a5 5 0 010 7.072M12 6v12m0
+                            0l-3-3m3 3l3-3M6.343 9.657a8 8 0 000 11.314"/>
+                </svg>
+                <span class="font-medium">Audio Feedback</span>
+            </div>
+            <span id="audioFeedbackStatus"
+                class="text-sm font-semibold text-gray-400">OFF</span>
+        </button>
         
         <div class="bg-white rounded-lg shadow-lg p-6">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">Session Time</h3>
@@ -185,6 +203,57 @@
   </div>
 </div>
 
+<div>
+    {% if pose1.description %}
+        <div class="bg-white rounded-lg shadow-lg p-6">
+    <h3 class="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2 text-green-600"
+             fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0
+                     012-2h5.586a1 1 0 01.707.293l5.414 5.414a1
+                     1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        How to do it
+    </h3>
+
+    {% if pose1.difficulty or pose1.duration_minutes %}
+        <div class="flex items-center gap-3 mb-4">
+            {% if pose1.difficulty %}
+            <span class="px-2 py-1 rounded-full text-xs font-medium
+                {% if pose1.difficulty == 'Beginner' %}bg-green-100 text-green-700
+                {% elif pose1.difficulty == 'Intermediate' %}bg-yellow-100 text-yellow-700
+                {% else %}bg-red-100 text-red-700{% endif %}">
+                {{ pose1.difficulty }}
+            </span>
+            {% endif %}
+            {% if pose1.duration_minutes %}
+            <span class="text-xs text-gray-500">⏱ {{ pose1.duration_minutes }} min</span>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Image + Description side by side if image exists -->
+        {% if pose1.image %}
+        <div class="flex flex-col md:flex-row gap-6">
+            <div class="md:w-1/3">
+                <img src="{{ pose1.image.url }}"
+                    alt="{{ pose1.title }}"
+                    class="w-full rounded-lg shadow object-cover">
+            </div>
+            <div class="md:w-2/3 text-sm text-gray-700 leading-relaxed whitespace-pre-line">
+                {{ pose1.description }}
+            </div>
+        </div>
+        {% else %}
+        <div class="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
+            {{ pose1.description }}
+        </div>
+        {% endif %}
+    </div>
+        {% endif %}
+</div>
+
 <!-- MediaPipe CDN -->
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
@@ -209,6 +278,10 @@ let targetPose        = {% if selected_pose %}'{{ selected_pose }}'{% else %}nul
 let currentCameraFacing = 'user';
 let totalFrames       = 0;
 let correctFrames     = 0;
+
+let audioFeedbackEnabled  = false;
+let feedbackAudioInterval = null;
+let lastSpokenFeedback    = '';
 
 // Video-upload mode
 let isVideoMode   = false;
@@ -246,6 +319,9 @@ const videoUploadInput  = document.getElementById('videoUpload');
 const uploadBtn         = document.getElementById('uploadBtn');
 const removeVideoBtn    = document.getElementById('removeVideoBtn');
 
+const audioFeedbackBtn    = document.getElementById('audioFeedbackBtn');
+const audioFeedbackStatus = document.getElementById('audioFeedbackStatus');
+
 // Remove native video controls — they block the canvas overlay
 videoEl.removeAttribute('controls');
 
@@ -266,6 +342,80 @@ function formatTime(s) {
 
 function poseLabelOf(raw) {
     return raw ? raw.charAt(0).toUpperCase() + raw.slice(1).replace(/_/g,' ') : '—';
+}
+
+// ── Chrome speech synthesis keepalive ──
+let speechKeepAlive = null;
+
+function startSpeechKeepAlive() {
+    speechKeepAlive = setInterval(() => {
+        if (speechSynthesis.paused) {
+            speechSynthesis.resume();
+        }
+    }, 7000);
+}
+
+function stopSpeechKeepAlive() {
+    clearInterval(speechKeepAlive);
+    speechKeepAlive = null;
+}
+
+
+// ── Audio feedback toggle ──────────────────────────────────
+audioFeedbackBtn.addEventListener('click', () => {
+    audioFeedbackEnabled = !audioFeedbackEnabled;
+
+    if (audioFeedbackEnabled) {
+        audioFeedbackStatus.textContent = 'ON';
+        audioFeedbackStatus.className   = 'text-sm font-semibold text-green-600';
+        audioFeedbackBtn.classList.remove('border-gray-300', 'text-gray-700');
+        audioFeedbackBtn.classList.add('border-green-500', 'text-green-700', 'bg-green-50');
+
+        // Warm up speech synthesis — requires user gesture
+        const warmup = new SpeechSynthesisUtterance('');
+        speechSynthesis.speak(warmup);
+
+        // Start interval if session already active
+        if (sessionActive && !isVideoMode && !feedbackAudioInterval) {
+            feedbackAudioInterval = setInterval(speakCurrentFeedback, 7000);
+        }
+    } else {
+        audioFeedbackStatus.textContent = 'OFF';
+        audioFeedbackStatus.className   = 'text-sm font-semibold text-gray-400';
+        audioFeedbackBtn.classList.add('border-gray-300', 'text-gray-700');
+        audioFeedbackBtn.classList.remove('border-green-500', 'text-green-700', 'bg-green-50');
+
+        clearInterval(feedbackAudioInterval);
+        feedbackAudioInterval = null;
+        speechSynthesis.cancel();
+        lastSpokenFeedback = '';
+    }
+});
+
+function speakCurrentFeedback() {
+    if (!sessionActive || isVideoMode || !audioFeedbackEnabled) return;
+
+    const currentFeedback = feedbackEl.textContent;
+
+    // Only skip truly empty or session-start messages
+    if (!currentFeedback ||
+        currentFeedback.includes('Click "Start Session"') ||
+        currentFeedback.includes('Session started') ||
+        currentFeedback.includes('Initialising')) return;
+
+    speechSynthesis.cancel();
+
+    setTimeout(() => {
+        if (speechSynthesis.paused) speechSynthesis.resume();
+
+        const msg  = new SpeechSynthesisUtterance(currentFeedback);
+        msg.lang   = 'en-US';
+        msg.rate   = 0.95;
+        msg.volume = 1.0;
+        msg.onerror = (e) => console.warn('Speech error:', e.error);
+
+        speechSynthesis.speak(msg);
+    }, 200);
 }
 
 // ============================================================
@@ -390,6 +540,13 @@ let liveLoopRunning = false;
 function livePoseLoop() {
     if (liveLoopRunning) return;
     liveLoopRunning = true;
+
+        
+    if (audioFeedbackEnabled && !feedbackAudioInterval) {
+        feedbackAudioInterval = setInterval(speakCurrentFeedback, 7000);
+        startSpeechKeepAlive();
+    }
+
     const loop = async () => {
         if (!sessionActive || isVideoMode) { liveLoopRunning = false; return; }
         if (videoEl.readyState >= 2) {
@@ -868,6 +1025,14 @@ async function stopLiveSession() {
 
     // Restore original targetPose from page
     targetPose = {% if selected_pose %}'{{ selected_pose }}'{% else %}null{% endif %};
+
+        
+    clearInterval(feedbackAudioInterval);
+    feedbackAudioInterval = null;
+    speechSynthesis.cancel();
+    lastSpokenFeedback = '';
+    stopSpeechKeepAlive();
+    
 }
 
 async function stopVideoPlayback() {
