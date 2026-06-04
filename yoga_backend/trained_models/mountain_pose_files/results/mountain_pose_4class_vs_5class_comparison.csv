@@ -1,0 +1,9 @@
+Experiment,Model,CV F1,Test F1,Test Accuracy,Recall: correct,Recall: arms_not_dropped,Recall: tilted_head,Recall: wide_stance,Recall: bent_forward
+4-class (no bent_forward),Logistic Regression,0.8058,0.9484,0.9484,1.0,0.9422,0.9778,0.9022,
+4-class (no bent_forward),SVC,0.8874,0.9242,0.92,0.97,0.8133,0.9511,0.9733,
+4-class (no bent_forward),k-NN,0.852,0.9297,0.929,0.97,0.8578,0.96,0.9511,
+4-class (no bent_forward),XGBoost,0.8271,0.9079,0.9032,0.97,0.7689,0.9689,0.9422,
+5-class (full),Logistic Regression,0.7138,0.7196,0.75,0.2599,0.92,0.8356,0.9822,0.9244
+5-class (full),SVC,0.8075,0.7407,0.7633,0.2467,0.8533,0.9467,0.9867,0.9644
+5-class (full),k-NN,0.7872,0.7352,0.76,0.2467,0.8444,0.9244,0.9867,0.9778
+5-class (full),XGBoost,0.8112,0.7166,0.7434,0.2237,0.7644,0.96,0.9733,0.9778

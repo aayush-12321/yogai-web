@@ -1,0 +1,74 @@
+pose_name: mountain_pose
+
+classes:
+  - correct
+  - arms_not_dropped
+  - bent_forward
+  - tilted_head
+  - wide_stance
+
+dataset:
+  raw_dir: data/raw/mountain_pose
+  processed_dir: data/processed/mountain_pose
+
+feedback:
+  correct: "Excellent posture. Keep your core engaged and breathe evenly."
+  arms_not_dropped: "Relax your arms completely down by your sides, fingers pointing toward the floor."
+  bent_forward: "Hinge back up from your hips. Keep your spine erect and chest open."
+  tilted_head: "Align your head center. Keep your chin parallel to the floor and ears directly over your shoulders."
+  wide_stance: "Bring your feet closer together. They should be hip-width apart or toes touching."
+
+# Configuration for your feature extraction pipeline
+features_config:
+  # PHASE 1: MediaPipe Landmark Indices (Used for raw coordinate training)
+  # Extracted as raw (x, y, z, visibility) vectors
+  mediapipe_landmarks:
+    - 11  # LEFT_SHOULDER
+    - 12  # RIGHT_SHOULDER
+    - 23  # LEFT_HIP
+    - 24  # RIGHT_HIP
+    - 25  # LEFT_KNEE
+    - 26  # RIGHT_KNEE
+    - 27  # LEFT_ANKLE
+    - 28  # RIGHT_ANKLE
+    - 15  # LEFT_WRIST
+    - 16  # RIGHT_WRIST
+    - 7   # LEFT_EAR
+    - 8   # RIGHT_EAR
+
+  # PHASE 2: Engineered Geometric Features (Highly distinctive for the target classes)
+  engineered_features:
+    joint_angles:
+      - name: left_torso_hip_angle
+        joints: [11, 23, 25]          # Shoulder -> Hip -> Knee (Tracks 'bent_forward')
+      - name: right_torso_hip_angle
+        joints: [12, 24, 26]         # Shoulder -> Hip -> Knee (Tracks 'bent_forward')
+      - name: left_shoulder_arm_angle
+        joints: [23, 11, 15]          # Hip -> Shoulder -> Wrist (Tracks 'arms_not_dropped')
+      - name: right_shoulder_arm_angle
+        joints: [24, 12, 16]         # Hip -> Shoulder -> Wrist (Tracks 'arms_not_dropped')
+      - name: neck_tilt_angle
+        joints: [7, 11, 23]           # Ear -> Shoulder -> Hip (Tracks 'tilted_head' / forward lean)
+
+    spatial_distances:
+      - name: feet_distance_normalized
+        joints: [27, 28]              # Left Ankle to Right Ankle (Tracks 'wide_stance')
+        normalization_factor: [11, 12] # Divided by Shoulder Width to ensure scale-invariance
+
+      # - name: left_hand_hip_distance
+      #   joints: [15, 23]              # Left Wrist to Left Hip (Backup for 'arms_not_dropped')
+      #   normalization_factor: [11, 23] # Normalized by Left Torso Length (Left Shoulder to Left Hip)
+
+      # - name: right_hand_hip_distance
+      #   joints: [16, 24]              # Right Wrist to Right Hip (Backup for 'arms_not_dropped')
+      #   normalization_factor: [12, 24] # Normalized by Right Torso Length (Right Shoulder to Right Hip)
+
+    alignment_offsets:
+      - name: ear_shoulder_lateral_delta
+        joints: [7, 8, 11, 12]        # Compares ear line slope against shoulder line slope (Tracks 'tilted_head')
+        # NOTE: Since this tracks slope/angles, ensure  python script clamps the output 
+        # between 0° and 180° (or -90° and 90°) to destroy that 360° boundary-wrapping bug!
+
+      - name: plumb_line_alignment
+        joints: [11, 23, 25, 27]      # Global vertical deviation tracking (Shoulder-Hip-Knee-Ankle alignment)
+        normalization_factor: [11, 23] # Normalized by Torso Length to keep horizontal pixel offset scale-invariant

@@ -1,0 +1,69 @@
+{
+  "pose": "plank_pose",
+  "experiment_tag": "full_class",
+  "model": "xgboost",
+  "feature_columns": [
+    "neck_tilt_angle",
+    "torso_hip_angle",
+    "hip_knee_angle",
+    "hip_shoulder_vertical_ratio",
+    "plumb_line_alignment"
+  ],
+  "n_features": 5,
+  "best_params": {
+    "classifier__subsample": 1.0,
+    "classifier__n_estimators": 300,
+    "classifier__min_child_weight": 3,
+    "classifier__max_depth": 7,
+    "classifier__learning_rate": 0.05,
+    "classifier__colsample_bytree": 1.0
+  },
+  "best_cv_score": 0.9977,
+  "cv_folds_scores": [
+    0.9977,
+    0.9984,
+    0.9974,
+    0.9977,
+    0.9972
+  ],
+  "test_f1_weighted": 0.9958,
+  "test_accuracy": 0.9958,
+  "n_train": 28520,
+  "n_test": 710,
+  "cv_config": {
+    "n_splits": 5,
+    "random_seed": 42,
+    "scoring": "f1_weighted",
+    "n_jobs": -1
+  },
+  "class_map": {
+    "0": "c",
+    "1": "h",
+    "2": "l"
+  },
+  "latency": {
+    "mean_ms": 1.8064,
+    "std_ms": 0.2092,
+    "p95_ms": 2.2421,
+    "p99_ms": 2.3609,
+    "implied_max_fps": 553.6
+  },
+  "confusion_matrix": [
+    [
+      234,
+      0,
+      0
+    ],
+    [
+      1,
+      240,
+      0
+    ],
+    [
+      2,
+      0,
+      233
+    ]
+  ],
+  "classification_report": "              precision    recall  f1-score   support\n\n           c       0.99      1.00      0.99       234\n           h       1.00      1.00      1.00       241\n           l       1.00      0.99      1.00       235\n\n    accuracy                           1.00       710\n   macro avg       1.00      1.00      1.00       710\nweighted avg       1.00      1.00      1.00       710\n"
+}

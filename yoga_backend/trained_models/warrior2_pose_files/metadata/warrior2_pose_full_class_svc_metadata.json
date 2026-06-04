@@ -1,0 +1,103 @@
+{
+  "pose": "warrior2_pose",
+  "experiment_tag": "full_class",
+  "model": "svc",
+  "feature_columns": [
+    "back_knee_flexion_angle",
+    "front_knee_flexion_angle",
+    "spine_hip_angle",
+    "stance_width_normalized",
+    "front_knee_ankle_alignment",
+    "center_of_mass_torso_offset",
+    "wrist_height_symmetry",
+    "front_wrist_shoulder_vertical_offset",
+    "back_wrist_shoulder_vertical_offset"
+  ],
+  "n_features": 9,
+  "best_params": {
+    "classifier__C": 0.1,
+    "classifier__gamma": "scale",
+    "classifier__kernel": "linear"
+  },
+  "best_cv_score": 0.792,
+  "cv_folds_scores": [
+    0.7769,
+    0.807
+  ],
+  "test_f1_weighted": 0.8151,
+  "test_accuracy": 0.8183,
+  "n_train": 2686,
+  "n_test": 2686,
+  "cv_config": {
+    "n_splits": 2,
+    "random_seed": 42,
+    "scoring": "f1_weighted",
+    "n_jobs": -1
+  },
+  "class_map": {
+    "0": "back_leg_bent",
+    "1": "correct",
+    "2": "drooping_arms",
+    "3": "knee_caved",
+    "4": "leaning_torso",
+    "5": "shallow_stance"
+  },
+  "latency": {
+    "mean_ms": 1.0504,
+    "std_ms": 0.3522,
+    "p95_ms": 1.7104,
+    "p99_ms": 2.4295,
+    "implied_max_fps": 952.0
+  },
+  "confusion_matrix": [
+    [
+      368,
+      8,
+      0,
+      17,
+      13,
+      44
+    ],
+    [
+      14,
+      416,
+      1,
+      4,
+      2,
+      0
+    ],
+    [
+      18,
+      0,
+      401,
+      0,
+      26,
+      5
+    ],
+    [
+      0,
+      0,
+      0,
+      185,
+      4,
+      261
+    ],
+    [
+      0,
+      0,
+      6,
+      3,
+      440,
+      0
+    ],
+    [
+      4,
+      0,
+      1,
+      51,
+      6,
+      388
+    ]
+  ],
+  "classification_report": "                precision    recall  f1-score   support\n\n back_leg_bent       0.91      0.82      0.86       450\n       correct       0.98      0.95      0.97       437\n drooping_arms       0.98      0.89      0.93       450\n    knee_caved       0.71      0.41      0.52       450\n leaning_torso       0.90      0.98      0.94       449\nshallow_stance       0.56      0.86      0.68       450\n\n      accuracy                           0.82      2686\n     macro avg       0.84      0.82      0.82      2686\n  weighted avg       0.84      0.82      0.82      2686\n"
+}

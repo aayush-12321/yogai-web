@@ -1,0 +1,90 @@
+{
+  "pose": "warrior2_pose",
+  "experiment_tag": "reduced_class",
+  "model": "logistic_regression",
+  "feature_columns": [
+    "back_knee_flexion_angle",
+    "front_knee_flexion_angle",
+    "spine_hip_angle",
+    "stance_width_normalized",
+    "front_knee_ankle_alignment",
+    "center_of_mass_torso_offset",
+    "wrist_height_symmetry",
+    "front_wrist_shoulder_vertical_offset",
+    "back_wrist_shoulder_vertical_offset"
+  ],
+  "n_features": 9,
+  "best_params": {
+    "classifier__C": 10.0,
+    "classifier__max_iter": 1000,
+    "classifier__penalty": "l2",
+    "classifier__solver": "lbfgs"
+  },
+  "best_cv_score": 0.8891,
+  "cv_folds_scores": [
+    0.8396,
+    0.9385
+  ],
+  "test_f1_weighted": 0.9476,
+  "test_accuracy": 0.9481,
+  "n_train": 2236,
+  "n_test": 2236,
+  "cv_config": {
+    "n_splits": 2,
+    "random_seed": 42,
+    "scoring": "f1_weighted",
+    "n_jobs": -1
+  },
+  "class_map": {
+    "0": "back_leg_bent",
+    "1": "correct",
+    "2": "drooping_arms",
+    "3": "knee_caved",
+    "4": "leaning_torso"
+  },
+  "latency": {
+    "mean_ms": 0.1718,
+    "std_ms": 0.111,
+    "p95_ms": 0.2753,
+    "p99_ms": 0.6448,
+    "implied_max_fps": 5819.7
+  },
+  "confusion_matrix": [
+    [
+      435,
+      4,
+      0,
+      4,
+      7
+    ],
+    [
+      10,
+      419,
+      5,
+      0,
+      3
+    ],
+    [
+      2,
+      0,
+      446,
+      1,
+      1
+    ],
+    [
+      4,
+      48,
+      7,
+      378,
+      13
+    ],
+    [
+      1,
+      1,
+      5,
+      0,
+      442
+    ]
+  ],
+  "classification_report": "               precision    recall  f1-score   support\n\nback_leg_bent       0.96      0.97      0.96       450\n      correct       0.89      0.96      0.92       437\ndrooping_arms       0.96      0.99      0.98       450\n   knee_caved       0.99      0.84      0.91       450\nleaning_torso       0.95      0.98      0.97       449\n\n     accuracy                           0.95      2236\n    macro avg       0.95      0.95      0.95      2236\n weighted avg       0.95      0.95      0.95      2236\n"
+}

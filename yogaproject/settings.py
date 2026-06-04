@@ -176,3 +176,8 @@ LOGGING = {
         },
     },
 }
+
+
+# settings.py
+DATA_UPLOAD_MAX_MEMORY_SIZE = 104857600   # 100 MB — matches MAX_VIDEO_BYTES in views.py
+FILE_UPLOAD_MAX_MEMORY_SIZE = 104857600   # 100 MB
