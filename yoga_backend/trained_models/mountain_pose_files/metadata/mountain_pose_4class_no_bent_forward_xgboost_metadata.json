@@ -1,0 +1,80 @@
+{
+  "pose": "mountain_pose",
+  "experiment_tag": "4class_no_bent_forward",
+  "model": "xgboost",
+  "feature_columns": [
+    "left_torso_hip_angle",
+    "right_torso_hip_angle",
+    "left_shoulder_arm_angle",
+    "right_shoulder_arm_angle",
+    "neck_tilt_angle",
+    "feet_distance_normalized",
+    "ear_shoulder_lateral_delta",
+    "plumb_line_alignment"
+  ],
+  "n_features": 8,
+  "best_params": {
+    "classifier__subsample": 1.0,
+    "classifier__n_estimators": 200,
+    "classifier__min_child_weight": 1,
+    "classifier__max_depth": 7,
+    "classifier__learning_rate": 0.01,
+    "classifier__colsample_bytree": 0.7
+  },
+  "best_cv_score": 0.8271,
+  "cv_folds_scores": [
+    0.8307,
+    0.7619,
+    0.8888
+  ],
+  "test_f1_weighted": 0.9079,
+  "test_accuracy": 0.9032,
+  "n_train": 2965,
+  "n_test": 775,
+  "cv_config": {
+    "n_splits": 3,
+    "random_seed": 42,
+    "scoring": "f1_weighted",
+    "n_jobs": -1
+  },
+  "class_map": {
+    "0": "arms_not_dropped",
+    "1": "correct",
+    "2": "tilted_head",
+    "3": "wide_stance"
+  },
+  "latency": {
+    "mean_ms": 2.8453,
+    "std_ms": 0.7624,
+    "p95_ms": 4.4634,
+    "p99_ms": 5.0159,
+    "implied_max_fps": 351.5
+  },
+  "confusion_matrix": [
+    [
+      173,
+      51,
+      0,
+      1
+    ],
+    [
+      3,
+      97,
+      0,
+      0
+    ],
+    [
+      0,
+      6,
+      218,
+      1
+    ],
+    [
+      9,
+      3,
+      1,
+      212
+    ]
+  ],
+  "classification_report": "                  precision    recall  f1-score   support\n\narms_not_dropped       0.94      0.77      0.84       225\n         correct       0.62      0.97      0.75       100\n     tilted_head       1.00      0.97      0.98       225\n     wide_stance       0.99      0.94      0.97       225\n\n        accuracy                           0.90       775\n       macro avg       0.88      0.91      0.89       775\n    weighted avg       0.93      0.90      0.91       775\n"
+}

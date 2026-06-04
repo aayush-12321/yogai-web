@@ -1,0 +1,5 @@
+Model,ΔTest F1  (4-5),ΔCV F1   (4-5),ΔRecall: correct (4-5),ΔRecall: arms_not_dropped(4-5)
+Logistic Regression,0.2288,0.092,0.7401,0.0222
+SVC,0.1835,0.0799,0.7233,-0.04
+k-NN,0.1945,0.0648,0.7233,0.0134
+XGBoost,0.1913,0.0159,0.7463,0.0045

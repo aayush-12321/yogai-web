@@ -1,0 +1,9 @@
+Experiment,Model,CV F1,Test F1,Test Accuracy,Recall: correct,Recall: drooping_arms,Recall: knee_caved,Recall: leaning_torso,Recall: shallow_stance,Recall: back_leg_bent
+5-class (no shallow_stance),Logistic Regression,0.8891,0.9476,0.9481,0.9588,0.9911,0.84,0.9844,,0.9667
+5-class (no shallow_stance),SVC,0.9131,0.9217,0.9217,0.9863,0.9933,0.8267,0.9822,,0.8222
+5-class (no shallow_stance),k-NN,0.8995,0.9395,0.9396,0.9703,0.9778,0.8844,0.98,,0.8867
+5-class (no shallow_stance),XGBoost,0.9014,0.9512,0.9508,0.9725,0.9778,0.9133,0.9733,,0.9178
+6-class (full),Logistic Regression,0.7627,0.8194,0.8217,0.9725,0.8711,0.4622,0.98,0.7511,0.8978
+6-class (full),SVC,0.792,0.8151,0.8183,0.9519,0.8911,0.4111,0.98,0.8622,0.8178
+6-class (full),k-NN,0.8054,0.795,0.8004,0.9497,0.8844,0.3333,0.98,0.82,0.84
+6-class (full),XGBoost,0.7895,0.735,0.7308,0.8833,0.7978,0.4533,0.9733,0.4133,0.8689

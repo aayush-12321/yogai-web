@@ -1,0 +1,89 @@
+{
+  "pose": "warrior2_pose",
+  "experiment_tag": "reduced_class",
+  "model": "knn",
+  "feature_columns": [
+    "back_knee_flexion_angle",
+    "front_knee_flexion_angle",
+    "spine_hip_angle",
+    "stance_width_normalized",
+    "front_knee_ankle_alignment",
+    "center_of_mass_torso_offset",
+    "wrist_height_symmetry",
+    "front_wrist_shoulder_vertical_offset",
+    "back_wrist_shoulder_vertical_offset"
+  ],
+  "n_features": 9,
+  "best_params": {
+    "classifier__metric": "euclidean",
+    "classifier__n_neighbors": 5,
+    "classifier__weights": "distance"
+  },
+  "best_cv_score": 0.8995,
+  "cv_folds_scores": [
+    0.8904,
+    0.9086
+  ],
+  "test_f1_weighted": 0.9395,
+  "test_accuracy": 0.9396,
+  "n_train": 2236,
+  "n_test": 2236,
+  "cv_config": {
+    "n_splits": 2,
+    "random_seed": 42,
+    "scoring": "f1_weighted",
+    "n_jobs": -1
+  },
+  "class_map": {
+    "0": "back_leg_bent",
+    "1": "correct",
+    "2": "drooping_arms",
+    "3": "knee_caved",
+    "4": "leaning_torso"
+  },
+  "latency": {
+    "mean_ms": 1.3029,
+    "std_ms": 0.773,
+    "p95_ms": 2.2064,
+    "p99_ms": 3.4407,
+    "implied_max_fps": 767.5
+  },
+  "confusion_matrix": [
+    [
+      399,
+      20,
+      3,
+      1,
+      27
+    ],
+    [
+      7,
+      424,
+      2,
+      0,
+      4
+    ],
+    [
+      2,
+      1,
+      440,
+      4,
+      3
+    ],
+    [
+      0,
+      23,
+      10,
+      398,
+      19
+    ],
+    [
+      0,
+      0,
+      7,
+      2,
+      440
+    ]
+  ],
+  "classification_report": "               precision    recall  f1-score   support\n\nback_leg_bent       0.98      0.89      0.93       450\n      correct       0.91      0.97      0.94       437\ndrooping_arms       0.95      0.98      0.96       450\n   knee_caved       0.98      0.88      0.93       450\nleaning_torso       0.89      0.98      0.93       449\n\n     accuracy                           0.94      2236\n    macro avg       0.94      0.94      0.94      2236\n weighted avg       0.94      0.94      0.94      2236\n"
+}

@@ -1,0 +1,92 @@
+{
+  "pose": "mountain_pose",
+  "experiment_tag": "5class_full",
+  "model": "xgboost",
+  "feature_columns": [
+    "left_torso_hip_angle",
+    "right_torso_hip_angle",
+    "left_shoulder_arm_angle",
+    "right_shoulder_arm_angle",
+    "neck_tilt_angle",
+    "feet_distance_normalized",
+    "ear_shoulder_lateral_delta",
+    "plumb_line_alignment"
+  ],
+  "n_features": 8,
+  "best_params": {
+    "classifier__subsample": 0.7,
+    "classifier__n_estimators": 100,
+    "classifier__min_child_weight": 5,
+    "classifier__max_depth": 7,
+    "classifier__learning_rate": 0.05,
+    "classifier__colsample_bytree": 1.0
+  },
+  "best_cv_score": 0.8112,
+  "cv_folds_scores": [
+    0.758,
+    0.8113,
+    0.8642
+  ],
+  "test_f1_weighted": 0.7166,
+  "test_accuracy": 0.7434,
+  "n_train": 3436,
+  "n_test": 1204,
+  "cv_config": {
+    "n_splits": 3,
+    "random_seed": 42,
+    "scoring": "f1_weighted",
+    "n_jobs": -1
+  },
+  "class_map": {
+    "0": "arms_not_dropped",
+    "1": "bent_forward",
+    "2": "correct",
+    "3": "tilted_head",
+    "4": "wide_stance"
+  },
+  "latency": {
+    "mean_ms": 1.4159,
+    "std_ms": 0.1963,
+    "p95_ms": 1.805,
+    "p99_ms": 1.9866,
+    "implied_max_fps": 706.2
+  },
+  "confusion_matrix": [
+    [
+      172,
+      0,
+      46,
+      0,
+      7
+    ],
+    [
+      0,
+      220,
+      2,
+      2,
+      1
+    ],
+    [
+      37,
+      196,
+      68,
+      0,
+      3
+    ],
+    [
+      1,
+      4,
+      1,
+      216,
+      3
+    ],
+    [
+      0,
+      6,
+      0,
+      0,
+      219
+    ]
+  ],
+  "classification_report": "                  precision    recall  f1-score   support\n\narms_not_dropped       0.82      0.76      0.79       225\n    bent_forward       0.52      0.98      0.68       225\n         correct       0.58      0.22      0.32       304\n     tilted_head       0.99      0.96      0.98       225\n     wide_stance       0.94      0.97      0.96       225\n\n        accuracy                           0.74      1204\n       macro avg       0.77      0.78      0.74      1204\n    weighted avg       0.76      0.74      0.72      1204\n"
+}

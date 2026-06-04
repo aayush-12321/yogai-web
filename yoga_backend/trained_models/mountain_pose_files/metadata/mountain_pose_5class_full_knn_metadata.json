@@ -1,0 +1,89 @@
+{
+  "pose": "mountain_pose",
+  "experiment_tag": "5class_full",
+  "model": "knn",
+  "feature_columns": [
+    "left_torso_hip_angle",
+    "right_torso_hip_angle",
+    "left_shoulder_arm_angle",
+    "right_shoulder_arm_angle",
+    "neck_tilt_angle",
+    "feet_distance_normalized",
+    "ear_shoulder_lateral_delta",
+    "plumb_line_alignment"
+  ],
+  "n_features": 8,
+  "best_params": {
+    "classifier__metric": "euclidean",
+    "classifier__n_neighbors": 15,
+    "classifier__weights": "uniform"
+  },
+  "best_cv_score": 0.7872,
+  "cv_folds_scores": [
+    0.7379,
+    0.7492,
+    0.8746
+  ],
+  "test_f1_weighted": 0.7352,
+  "test_accuracy": 0.76,
+  "n_train": 3436,
+  "n_test": 1204,
+  "cv_config": {
+    "n_splits": 3,
+    "random_seed": 42,
+    "scoring": "f1_weighted",
+    "n_jobs": -1
+  },
+  "class_map": {
+    "0": "arms_not_dropped",
+    "1": "bent_forward",
+    "2": "correct",
+    "3": "tilted_head",
+    "4": "wide_stance"
+  },
+  "latency": {
+    "mean_ms": 2.3154,
+    "std_ms": 0.9918,
+    "p95_ms": 3.5666,
+    "p99_ms": 6.1083,
+    "implied_max_fps": 431.9
+  },
+  "confusion_matrix": [
+    [
+      190,
+      0,
+      22,
+      7,
+      6
+    ],
+    [
+      0,
+      220,
+      4,
+      0,
+      1
+    ],
+    [
+      26,
+      202,
+      75,
+      0,
+      1
+    ],
+    [
+      7,
+      2,
+      7,
+      208,
+      1
+    ],
+    [
+      0,
+      3,
+      0,
+      0,
+      222
+    ]
+  ],
+  "classification_report": "                  precision    recall  f1-score   support\n\narms_not_dropped       0.85      0.84      0.85       225\n    bent_forward       0.52      0.98      0.67       225\n         correct       0.69      0.25      0.36       304\n     tilted_head       0.97      0.92      0.95       225\n     wide_stance       0.96      0.99      0.97       225\n\n        accuracy                           0.76      1204\n       macro avg       0.80      0.80      0.76      1204\n    weighted avg       0.79      0.76      0.74      1204\n"
+}

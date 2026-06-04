@@ -1,0 +1,5 @@
+Model,ΔTest F1  (5-6),ΔCV F1   (5-6),ΔRecall: correct (5-6),ΔRecall: knee_caved (5-6)
+Logistic Regression,0.1282,0.1264,-0.0137,0.3778
+SVC,0.1066,0.1211,0.0344,0.4156
+k-NN,0.1445,0.0941,0.0206,0.5511
+XGBoost,0.2162,0.1119,0.0892,0.46

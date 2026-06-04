@@ -5,219 +5,271 @@
 
 {% block content %}
 <div class="min-h-screen bg-gray-50 p-4">
-  <div class="max-w-7xl mx-auto">
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <div class="max-w-7xl mx-auto">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
-      <!-- Main Webcam Panel -->
-      <div class="lg:col-span-3">
-        <div class="bg-white rounded-lg shadow-lg overflow-hidden">
-          <div class="aspect-video bg-gray-900 relative">
+            <!-- Main Webcam Panel -->
+            <div class="lg:col-span-3">
+                <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                    <div class="aspect-video bg-gray-900 relative">
 
-            <!-- NOTE: NO "controls" attribute — it blocks the canvas overlay -->
-            <video id="webcam" autoplay muted playsinline
-                   class="w-full h-full object-cover"
-                   style="display:block;"></video>
+                        <video id="webcam" autoplay muted playsinline class="w-full h-full object-cover"
+                            style="display:block;"></video>
 
-            <canvas id="canvas"
-                    class="absolute inset-0 w-full h-full"
-                    style="background:transparent; pointer-events:none;"></canvas>
+                        <canvas id="canvas" class="absolute inset-0 w-full h-full"
+                            style="background:transparent; pointer-events:none;"></canvas>
 
-            <!-- Overlay shown before session starts -->
-            <div id="overlay"
-                 class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
-              <div class="text-center text-white">
-                <svg xmlns="http://www.w3.org/2000/svg"
-                     class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none"
-                     viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M15 10l4.553-2.069A1 1 0 0121 8.869v6.262a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
-                </svg>
-                <p class="text-lg font-medium">Click Start Session to begin</p>
-              </div>
-            </div>
+                        <!-- Overlay shown before session starts -->
+                        <div id="overlay"
+                            class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
+                            <div class="text-center text-white">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 mx-auto mb-4 opacity-50"
+                                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 10l4.553-2.069A1 1 0 0121 8.869v6.262a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+                                </svg>
+                                <p class="text-lg font-medium">Click Start Session to begin</p>
+                            </div>
+                        </div>
 
-            <!-- LIVE / VIDEO badge -->
-            <div id="liveBadge"
-                 class="absolute top-4 left-4 bg-red-500 text-white px-3 py-1
+                        <!-- Uploading/transcoding overlay (shown during analysis) -->
+                        <div id="uploadingOverlay"
+                            class="absolute inset-0 items-center justify-center bg-black bg-opacity-70 hidden">
+                            <div class="text-center text-white px-6">
+                                <svg class="animate-spin w-12 h-12 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                        stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                    </path>
+                                </svg>
+                                <p id="uploadingOverlayMsg" class="text-lg font-medium">Analyzing video…</p>
+                                <p class="text-sm text-gray-300 mt-1">This may take 15–60 seconds for longer videos</p>
+                            </div>
+                        </div>
+
+                        <!-- LIVE / VIDEO badge -->
+                        <div id="liveBadge" class="absolute top-4 left-4 bg-red-500 text-white px-3 py-1
                         rounded-full text-sm font-medium animate-pulse hidden">
-              LIVE
-            </div>
+                            LIVE
+                        </div>
 
-            <!-- Correct / Incorrect indicator -->
-            <div id="accuracyIndicator" class="absolute top-4 right-4 hidden">
-              <div class="bg-white bg-opacity-90 rounded-lg px-4 py-2 shadow-lg">
-                <div class="flex items-center space-x-2">
-                  <div id="statusIcon" class="w-3 h-3 rounded-full bg-gray-400"></div>
-                  <span id="statusText" class="text-sm font-medium text-gray-700">Detecting…</span>
-                </div>
-              </div>
-            </div>
-          </div>
+                        <!-- Correct / Incorrect indicator -->
+                        <div id="accuracyIndicator" class="absolute top-4 right-4 hidden">
+                            <div class="bg-white bg-opacity-90 rounded-lg px-4 py-2 shadow-lg">
+                                <div class="flex items-center space-x-2">
+                                    <div id="statusIcon" class="w-3 h-3 rounded-full bg-gray-400"></div>
+                                    <span id="statusText" class="text-sm font-medium text-gray-700">Detecting…</span>
+                                </div>
+                            </div>
+                        </div>
 
-          <!-- Controls -->
-          <div class="p-4 bg-white border-t flex flex-wrap items-center
+                        <!--
+                            VIDEO PLAYBACK CONTROLS
+                            Shown only during video mode playback (sessionActive && isVideoMode).
+                            User can play/pause and seek. Speed is fixed at 0.5x to keep predictions
+                            synced, but can be toggled between 0.5x and 1x.
+                            Hidden by default; shown via JS when video playback starts.
+                        -->
+                        <div id="videoControls" class="absolute bottom-0 left-0 right-0 hidden"
+                            style="background: linear-gradient(transparent, rgba(0,0,0,0.75)); padding: 12px 16px 10px;">
+
+                            <!-- Seek bar -->
+                            <div class="flex items-center gap-2 mb-2">
+                                <span id="vcCurrentTime"
+                                    class="text-white text-xs font-mono w-10 text-right shrink-0">0:00</span>
+                                <div class="relative flex-1 h-2 cursor-pointer" id="seekBarTrack"
+                                    style="background: rgba(255,255,255,0.3); border-radius: 4px;">
+                                    <!-- Buffered / played progress -->
+                                    <div id="seekBarFill"
+                                        style="height:100%; width:0%; background:#22c55e; border-radius:4px; pointer-events:none;">
+                                    </div>
+                                    <!-- Draggable thumb -->
+                                    <div id="seekBarThumb" style="position:absolute; top:50%; transform:translate(-50%,-50%); left:0%;
+                                               width:14px; height:14px; background:white; border-radius:50%;
+                                               box-shadow:0 1px 4px rgba(0,0,0,0.5); pointer-events:none;"></div>
+                                </div>
+                                <span id="vcDuration" class="text-white text-xs font-mono w-10 shrink-0">0:00</span>
+                            </div>
+
+                            <!-- Buttons row -->
+                            <div class="flex items-center gap-3">
+                                <!-- Play / Pause -->
+                                <button id="vcPlayPause" class="text-white hover:text-green-400 transition-colors"
+                                    title="Play / Pause">
+                                    <!-- Shows pause icon when playing (default during session) -->
+                                    <svg id="vcPauseIcon" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none"
+                                        viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M10 9v6m4-6v6M9 5h.01M15 5h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <svg id="vcPlayIcon" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 hidden"
+                                        fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </button>
+
+                                <!-- Speed toggle: 0.5x ↔ 1x -->
+                                <button id="vcSpeed"
+                                    class="text-white text-xs font-bold border border-white border-opacity-50 rounded px-2 py-0.5 hover:border-green-400 hover:text-green-400 transition-colors"
+                                    title="Toggle playback speed">
+                                    0.5×
+                                </button>
+
+                                <span class="text-white text-xs opacity-60 ml-auto">
+                                    ← drag seek bar to scrub →
+                                </span>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Main action controls -->
+                    <div class="p-4 bg-white border-t flex flex-wrap items-center
                       justify-center gap-3">
 
-            <button id="toggleSession"
-                    class="flex items-center px-6 py-3 rounded-lg font-medium
+                        <button id="toggleSession" class="flex items-center px-6 py-3 rounded-lg font-medium
                            bg-green-500 text-white hover:bg-green-600
                            transition-all duration-200">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2"
-                   fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0
-                         001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
-              Start Session
-            </button>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Start Session
+                        </button>
 
-            <button id="switchCamera"
-                    class="flex items-center px-4 py-3 border border-gray-300
+                        <button id="switchCamera" class="flex items-center px-4 py-3 border border-gray-300
                            rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2"
-                   fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11
-                         11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-              </svg>
-              Switch Camera
-            </button>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            Switch Camera
+                        </button>
 
-            <!-- Upload label triggers hidden file input -->
-            <label for="videoUpload" id="uploadBtn"
-                   class="flex items-center px-4 py-3 border border-gray-300
+                        <label for="videoUpload" id="uploadBtn" class="flex items-center px-4 py-3 border border-gray-300
                           rounded-lg text-gray-700 hover:bg-gray-50
                           transition-colors cursor-pointer">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2"
-                   fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0
-                         011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-              </svg>
-              Upload Video
-            </label>
-            <input type="file" id="videoUpload" accept="video/*" class="hidden">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                            Upload Video
+                        </label>
+                        <input type="file" id="videoUpload" accept="video/*" class="hidden">
 
-            <button id="removeVideoBtn"
-                    class="hidden items-center px-4 py-3 border border-red-300
+                        <button id="removeVideoBtn" class="hidden items-center px-4 py-3 border border-red-300
                            rounded-lg text-red-700 hover:bg-red-50 transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2"
-                   fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0
-                         01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0
-                         00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-              </svg>
-              Remove Video
-            </button>
-          </div>
-        </div>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Remove Video
+                        </button>
+                    </div>
+                </div>
 
-        <!-- Session Stats -->
-        <div class="mt-6 grid grid-cols-3 gap-4">
-          <div class="bg-white rounded-lg shadow p-4">
-            <div class="text-sm text-gray-500 mb-1">Frames Analyzed</div>
-            <div id="totalFrames" class="text-2xl font-bold text-gray-900">0</div>
-          </div>
-          <div class="bg-white rounded-lg shadow p-4">
-            <div class="text-sm text-gray-500 mb-1">Correct Poses</div>
-            <div id="correctFrames" class="text-2xl font-bold text-green-600">0</div>
-          </div>
-          <div class="bg-white rounded-lg shadow p-4">
-            <div class="text-sm text-gray-500 mb-1">Session Accuracy</div>
-            <div id="sessionAccuracy" class="text-2xl font-bold text-blue-600">0%</div>
-          </div>
-        </div>
-      </div>
+                <!-- Session Stats -->
+                <div class="mt-6 grid grid-cols-3 gap-4">
+                    <div class="bg-white rounded-lg shadow p-4">
+                        <div class="text-sm text-gray-500 mb-1">Frames Analyzed</div>
+                        <div id="totalFrames" class="text-2xl font-bold text-gray-900">0</div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-4">
+                        <div class="text-sm text-gray-500 mb-1">Correct Poses</div>
+                        <div id="correctFrames" class="text-2xl font-bold text-green-600">0</div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-4">
+                        <div class="text-sm text-gray-500 mb-1">Session Accuracy</div>
+                        <div id="sessionAccuracy" class="text-2xl font-bold text-blue-600">0%</div>
+                    </div>
+                </div>
+            </div>
 
-      <!-- Side Panel -->
-      <div class="space-y-6">
-        
-          <div 
-               class="text-3xl font-bold text-center text-green-600">{{selected_pose|default:"—"|title }}</div>
+            <!-- Side Panel -->
+            <div class="space-y-6">
 
-        <!-- Audio Feedback Toggle -->
-        <button id="audioFeedbackBtn"
-                class="w-full flex items-center justify-between px-4 py-3 
+                <div class="text-3xl font-bold text-center text-green-600">
+                    {{selected_pose|default:"—"|title }}
+                </div>
+
+                <!-- Audio Feedback Toggle -->
+                <button id="audioFeedbackBtn" class="w-full flex items-center justify-between px-4 py-3 
                     border-2 border-gray-300 rounded-lg text-gray-700 
                     hover:bg-gray-50 transition-colors bg-white shadow">
-            <div class="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2"
-                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M15.536 8.464a5 5 0 010 7.072M12 6v12m0
-                            0l-3-3m3 3l3-3M6.343 9.657a8 8 0 000 11.314"/>
-                </svg>
-                <span class="font-medium">Audio Feedback</span>
-            </div>
-            <span id="audioFeedbackStatus"
-                class="text-sm font-semibold text-gray-400">OFF</span>
-        </button>
-        
-        <div class="bg-white rounded-lg shadow-lg p-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Session Time</h3>
-          <div id="sessionTimer"
-               class="text-3xl font-bold text-center text-green-600">00:00</div>
-        </div>
+                    <div class="flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15.536 8.464a5 5 0 010 7.072M12 6v12m0 0l-3-3m3 3l3-3M6.343 9.657a8 8 0 000 11.314" />
+                        </svg>
+                        <span class="font-medium">Audio Feedback</span>
+                    </div>
+                    <span id="audioFeedbackStatus" class="text-sm font-semibold text-gray-400">OFF</span>
+                </button>
 
-        <div class="bg-white rounded-lg shadow-lg p-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Current Pose</h3>
-          <div class="text-center">
-            <div id="currentPose"
-                 class="text-2xl font-bold text-gray-900 mb-2">—</div>
-            <div class="text-sm text-gray-500 mb-4">
-              Confidence: <span id="confidence">0</span>%
-            </div>
-            <div class="w-full bg-gray-200 rounded-full h-2">
-              <div id="confidenceBar"
-                   class="h-2 rounded-full bg-red-500 transition-all duration-500"
-                   style="width:0%"></div>
-            </div>
-          </div>
-        </div>
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Session Time</h3>
+                    <div id="sessionTimer" class="text-3xl font-bold text-center text-green-600">00:00</div>
+                </div>
 
-        <div id="feedbackCard"
-             class="rounded-lg shadow-lg p-6 border-2 border-gray-300
-                    bg-white transition-all duration-300">
-          <h3 class="text-lg font-semibold mb-3 text-gray-900">Real-time Feedback</h3>
-          <p id="feedback"
-             class="text-sm leading-relaxed text-gray-600">
-            No session active. Select a pose and click Start Session.
-          </p>
-        </div>
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Current Pose</h3>
+                    <div class="text-center">
+                        <div id="currentPose" class="text-2xl font-bold text-gray-900 mb-2">—</div>
+                        <div class="text-sm text-gray-500 mb-4">
+                            Confidence: <span id="confidence">0</span>%
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div id="confidenceBar" class="h-2 rounded-full bg-red-500 transition-all duration-500"
+                                style="width:0%"></div>
+                        </div>
+                    </div>
+                </div>
 
-        <div id="targetPoseCard"
-             class="bg-gradient-to-br from-green-50 to-blue-50 rounded-lg
+                <div id="feedbackCard"
+                    class="rounded-lg shadow-lg p-6 border-2 border-blue-500 bg-blue-50 transition-all duration-300">
+                    <h3 class="text-lg font-semibold mb-3 text-gray-900">Real-time Feedback</h3>
+                    <p id="feedback" class="text-sm leading-relaxed text-gray-600">
+                        No session active. Select a pose and click Start Session.
+                    </p>
+                </div>
+
+                <div id="targetPoseCard" class="bg-gradient-to-br from-green-50 to-blue-50 rounded-lg
                     shadow-lg p-6 hidden">
-          <h3 class="text-lg font-semibold text-gray-900 mb-3">Target Pose</h3>
-          <div class="text-center">
-            <div id="targetPoseName"
-                 class="text-xl font-bold text-green-700 mb-2">—</div>
-            <div class="text-sm text-gray-600">Hold this pose for best results</div>
-          </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-3">Target Pose</h3>
+                    <div class="text-center">
+                        <div id="targetPoseName" class="text-xl font-bold text-green-700 mb-2">—</div>
+                        <div class="text-sm text-gray-600">Hold this pose for best results</div>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
     </div>
-  </div>
 </div>
 
 <div>
     {% if pose1.description %}
-        <div class="bg-white rounded-lg shadow-lg p-6">
-    <h3 class="text-lg font-semibold text-gray-900 mb-3 flex items-center">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2 text-green-600"
-             fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0
-                     012-2h5.586a1 1 0 01.707.293l5.414 5.414a1
-                     1 0 01.293.707V19a2 2 0 01-2 2z"/>
-        </svg>
-        How to do it
-    </h3>
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2 text-green-600" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            How to do it
+        </h3>
 
-    {% if pose1.difficulty or pose1.duration_minutes %}
+        {% if pose1.difficulty or pose1.duration_minutes %}
         <div class="flex items-center gap-3 mb-4">
             {% if pose1.difficulty %}
             <span class="px-2 py-1 rounded-full text-xs font-medium
@@ -233,13 +285,10 @@
         </div>
         {% endif %}
 
-        <!-- Image + Description side by side if image exists -->
         {% if pose1.image %}
         <div class="flex flex-col md:flex-row gap-6">
             <div class="md:w-1/3">
-                <img src="{{ pose1.image.url }}"
-                    alt="{{ pose1.title }}"
-                    class="w-full rounded-lg shadow object-cover">
+                <img src="{{ pose1.image.url }}" alt="{{ pose1.title }}" class="w-full rounded-lg shadow object-cover">
             </div>
             <div class="md:w-2/3 text-sm text-gray-700 leading-relaxed whitespace-pre-line">
                 {{ pose1.description }}
@@ -251,7 +300,7 @@
         </div>
         {% endif %}
     </div>
-        {% endif %}
+    {% endif %}
 </div>
 
 <!-- MediaPipe CDN -->
@@ -259,584 +308,778 @@
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
 
 <script>
-// ============================================================
-// CONFIG
-// ============================================================
-const API_BASE_URL      = '/api/yoga';
-const DETECTION_INTERVAL = 500;          // ms between backend /detect/ calls
-const userId             = '{{ user_id }}' || null;
+    // 
+    // CONFIG
+    // 
+    const API_BASE_URL = '/api/yoga';
+    const DETECTION_INTERVAL = 500;
+    const userId = '{{ user_id }}' || null;
 
-// ============================================================
-// STATE
-// ============================================================
-let sessionActive     = false;
-let sessionTime       = 0;
-let timerInterval     = null;
-let detectionInterval = null;
-let sessionId         = null;
-let targetPose        = {% if selected_pose %}'{{ selected_pose }}'{% else %}null{% endif %};
-let currentCameraFacing = 'user';
-let totalFrames       = 0;
-let correctFrames     = 0;
+    // 
+    // STATE
+    // 
+    let sessionActive = false;
+    let sessionTime = 0;
+    let timerInterval = null;
+    let detectionInterval = null;
+    let sessionId = null;
+    let targetPose = {% if selected_pose %}'{{ selected_pose }}'{% else %} null{% endif %};
+    let currentCameraFacing = 'user';
+    let totalFrames = 0;
+    let correctFrames = 0;
 
-let audioFeedbackEnabled  = false;
-let feedbackAudioInterval = null;
-let lastSpokenFeedback    = '';
+    let audioFeedbackEnabled = false;
+    let feedbackAudioInterval = null;
+    let speechKeepAlive = null;
 
-// Video-upload mode
-let isVideoMode   = false;
-let uploadedFile  = null;   // raw File object
+    // Video-upload mode
+    let isVideoMode = false;
+    let uploadedFile = null;
+    let sortedPreds = []; // Global store for predictions
 
-// MediaPipe
-let pose          = null;
-let poseReady     = false;
+    // MediaPipe
+    let pose = null;
+    let poseReady = false;
 
-// ============================================================
-// DOM
-// ============================================================
-const videoEl           = document.getElementById('webcam');
-const canvasEl          = document.getElementById('canvas');
-const ctx               = canvasEl.getContext('2d');
-const toggleBtn         = document.getElementById('toggleSession');
-const overlay           = document.getElementById('overlay');
-const liveBadge         = document.getElementById('liveBadge');
-const timerEl           = document.getElementById('sessionTimer');
-const currentPoseEl     = document.getElementById('currentPose');
-const confidenceEl      = document.getElementById('confidence');
-const confidenceBarEl   = document.getElementById('confidenceBar');
-const feedbackEl        = document.getElementById('feedback');
-const feedbackCard      = document.getElementById('feedbackCard');
-const statusIcon        = document.getElementById('statusIcon');
-const statusText        = document.getElementById('statusText');
-const accuracyIndicator = document.getElementById('accuracyIndicator');
-const targetPoseCard    = document.getElementById('targetPoseCard');
-const targetPoseName    = document.getElementById('targetPoseName');
-const switchCameraBtn   = document.getElementById('switchCamera');
-const totalFramesEl     = document.getElementById('totalFrames');
-const correctFramesEl   = document.getElementById('correctFrames');
-const sessionAccuracyEl = document.getElementById('sessionAccuracy');
-const videoUploadInput  = document.getElementById('videoUpload');
-const uploadBtn         = document.getElementById('uploadBtn');
-const removeVideoBtn    = document.getElementById('removeVideoBtn');
+    // Generation counters (prevent stale loop callbacks)
+    let liveLoopGen = 0;
+    let videoLoopGen = 0;
+    let syncUIGen = 0;
 
-const audioFeedbackBtn    = document.getElementById('audioFeedbackBtn');
-const audioFeedbackStatus = document.getElementById('audioFeedbackStatus');
+    // 
+    // DOM
+    // 
+    const videoEl = document.getElementById('webcam');
+    const canvasEl = document.getElementById('canvas');
+    const ctx = canvasEl.getContext('2d');
+    const toggleBtn = document.getElementById('toggleSession');
+    const overlay = document.getElementById('overlay');
+    const uploadingOverlay = document.getElementById('uploadingOverlay');
+    const uploadingOverlayMsg = document.getElementById('uploadingOverlayMsg');
+    const liveBadge = document.getElementById('liveBadge');
+    const timerEl = document.getElementById('sessionTimer');
+    const currentPoseEl = document.getElementById('currentPose');
+    const confidenceEl = document.getElementById('confidence');
+    const confidenceBarEl = document.getElementById('confidenceBar');
+    const feedbackEl = document.getElementById('feedback');
+    const feedbackCard = document.getElementById('feedbackCard');
+    const statusIcon = document.getElementById('statusIcon');
+    const statusText = document.getElementById('statusText');
+    const accuracyIndicator = document.getElementById('accuracyIndicator');
+    const targetPoseCard = document.getElementById('targetPoseCard');
+    const targetPoseName = document.getElementById('targetPoseName');
+    const switchCameraBtn = document.getElementById('switchCamera');
+    const totalFramesEl = document.getElementById('totalFrames');
+    const correctFramesEl = document.getElementById('correctFrames');
+    const sessionAccuracyEl = document.getElementById('sessionAccuracy');
+    const videoUploadInput = document.getElementById('videoUpload');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const removeVideoBtn = document.getElementById('removeVideoBtn');
+    const audioFeedbackBtn = document.getElementById('audioFeedbackBtn');
+    const audioFeedbackStatus = document.getElementById('audioFeedbackStatus');
 
-// Remove native video controls — they block the canvas overlay
-videoEl.removeAttribute('controls');
+    // Video controls DOM
+    const videoControls = document.getElementById('videoControls');
+    const vcPlayPause = document.getElementById('vcPlayPause');
+    const vcPauseIcon = document.getElementById('vcPauseIcon');
+    const vcPlayIcon = document.getElementById('vcPlayIcon');
+    const vcSpeed = document.getElementById('vcSpeed');
+    const seekBarTrack = document.getElementById('seekBarTrack');
+    const seekBarFill = document.getElementById('seekBarFill');
+    const seekBarThumb = document.getElementById('seekBarThumb');
+    const vcCurrentTime = document.getElementById('vcCurrentTime');
+    const vcDuration = document.getElementById('vcDuration');
 
-// ============================================================
-// HELPERS
-// ============================================================
-function getCsrfToken() {
-    const el = document.querySelector('[name=csrfmiddlewaretoken]');
-    if (el) return el.value;
-    for (const c of document.cookie.split('; '))
-        if (c.startsWith('csrftoken=')) return c.split('=')[1];
-    return '';
-}
+    // Ensure no native controls and no looping
+    videoEl.removeAttribute('controls');
+    videoEl.loop = false;
 
-function formatTime(s) {
-    return String(Math.floor(s / 60)).padStart(2,'0') + ':' + String(s % 60).padStart(2,'0');
-}
+    // Offscreen canvas for clean frame capture (no skeleton overlay)
+    const captureCanvas = document.createElement('canvas');
+    const captureCtx = captureCanvas.getContext('2d');
 
-function poseLabelOf(raw) {
-    return raw ? raw.charAt(0).toUpperCase() + raw.slice(1).replace(/_/g,' ') : '—';
-}
-
-// ── Chrome speech synthesis keepalive ──
-let speechKeepAlive = null;
-
-function startSpeechKeepAlive() {
-    speechKeepAlive = setInterval(() => {
-        if (speechSynthesis.paused) {
-            speechSynthesis.resume();
-        }
-    }, 7000);
-}
-
-function stopSpeechKeepAlive() {
-    clearInterval(speechKeepAlive);
-    speechKeepAlive = null;
-}
-
-
-// ── Audio feedback toggle ──────────────────────────────────
-audioFeedbackBtn.addEventListener('click', () => {
-    audioFeedbackEnabled = !audioFeedbackEnabled;
-
-    if (audioFeedbackEnabled) {
-        audioFeedbackStatus.textContent = 'ON';
-        audioFeedbackStatus.className   = 'text-sm font-semibold text-green-600';
-        audioFeedbackBtn.classList.remove('border-gray-300', 'text-gray-700');
-        audioFeedbackBtn.classList.add('border-green-500', 'text-green-700', 'bg-green-50');
-
-        // Warm up speech synthesis — requires user gesture
-        const warmup = new SpeechSynthesisUtterance('');
-        speechSynthesis.speak(warmup);
-
-        // Start interval if session already active
-        if (sessionActive && !isVideoMode && !feedbackAudioInterval) {
-            feedbackAudioInterval = setInterval(speakCurrentFeedback, 7000);
-        }
-    } else {
-        audioFeedbackStatus.textContent = 'OFF';
-        audioFeedbackStatus.className   = 'text-sm font-semibold text-gray-400';
-        audioFeedbackBtn.classList.add('border-gray-300', 'text-gray-700');
-        audioFeedbackBtn.classList.remove('border-green-500', 'text-green-700', 'bg-green-50');
-
-        clearInterval(feedbackAudioInterval);
-        feedbackAudioInterval = null;
-        speechSynthesis.cancel();
-        lastSpokenFeedback = '';
-    }
-});
-
-function speakCurrentFeedback() {
-    if (!sessionActive || isVideoMode || !audioFeedbackEnabled) return;
-
-    const currentFeedback = feedbackEl.textContent;
-
-    // Only skip truly empty or session-start messages
-    if (!currentFeedback ||
-        currentFeedback.includes('Click "Start Session"') ||
-        currentFeedback.includes('Session started') ||
-        currentFeedback.includes('Initialising')) return;
-
-    speechSynthesis.cancel();
-
-    setTimeout(() => {
-        if (speechSynthesis.paused) speechSynthesis.resume();
-
-        const msg  = new SpeechSynthesisUtterance(currentFeedback);
-        msg.lang   = 'en-US';
-        msg.rate   = 0.95;
-        msg.volume = 1.0;
-        msg.onerror = (e) => console.warn('Speech error:', e.error);
-
-        speechSynthesis.speak(msg);
-    }, 200);
-}
-
-// ============================================================
-// FEEDBACK UI
-// ============================================================
-function showFeedback(msg, type = 'info') {
-    feedbackEl.textContent = msg;
-    feedbackCard.className = 'rounded-lg shadow-lg p-6 border-2 transition-all duration-300';
-    const styles = {
-        success: ['bg-green-50','border-green-500'],
-        error:   ['bg-red-50',  'border-red-500'],
-        warning: ['bg-yellow-50','border-yellow-500'],
-        info:    ['bg-blue-50', 'border-blue-500'],
-    };
-    feedbackCard.classList.add(...(styles[type] || styles.info));
-}
-
-function showSessionSummary(data) {
-    const m = Math.floor(data.duration_seconds / 60);
-    const s = Math.floor(data.duration_seconds % 60);
-    const grade = data.accuracy >= 80 ? 'Excellent! 🌟'
-                : data.accuracy >= 60 ? 'Good effort! 👍'
-                : 'Keep practising! 💪';
-    showFeedback(
-        `Session Complete! 🎉\nPose: ${poseLabelOf(data.pose)}\n` +
-        `Duration: ${m}m ${s}s\nFrames: ${data.correct_frames}/${data.total_frames}\n` +
-        `Accuracy: ${data.accuracy.toFixed(1)}%\n${grade}`,
-        data.accuracy >= 70 ? 'success' : 'info'
-    );
-}
-
-// ============================================================
-// STATS
-// ============================================================
-function resetCounters() {
-    sessionTime = totalFrames = correctFrames = 0;
-    updateStats();
-    timerEl.textContent          = '00:00';
-    currentPoseEl.textContent    = '—';
-    confidenceEl.textContent     = '0';
-    confidenceBarEl.style.width  = '0%';
-}
-
-function updateStats() {
-    totalFramesEl.textContent   = totalFrames;
-    correctFramesEl.textContent = correctFrames;
-    const acc = totalFrames > 0 ? ((correctFrames/totalFrames)*100).toFixed(1) : '0.0';
-    sessionAccuracyEl.textContent = acc + '%';
-}
-
-// ============================================================
-// TOGGLE BUTTON APPEARANCE
-// ============================================================
-const SVG_PLAY = `<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
-const SVG_STOP = `<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg>`;
-const SVG_SPIN = `<svg class="animate-spin w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
-
-function setBtn(state) {
-    toggleBtn.disabled = (state === 'analyzing');
-    toggleBtn.classList.remove('bg-green-500','hover:bg-green-600','bg-red-500','hover:bg-red-600');
-    if (state === 'start') {
-        toggleBtn.innerHTML = SVG_PLAY + 'Start Session';
-        toggleBtn.classList.add('bg-green-500','hover:bg-green-600');
-    } else if (state === 'stop-live') {
-        toggleBtn.innerHTML = SVG_STOP + 'Stop Session';
-        toggleBtn.classList.add('bg-red-500','hover:bg-red-600');
-    } else if (state === 'analyze') {
-        toggleBtn.innerHTML = SVG_PLAY + 'Analyze Video';
-        toggleBtn.classList.add('bg-green-500','hover:bg-green-600');
-    } else if (state === 'analyzing') {
-        toggleBtn.innerHTML = SVG_SPIN + 'Analyzing…';
-        toggleBtn.classList.add('bg-green-500','hover:bg-green-600');
-    } else if (state === 'stop-video') {
-        toggleBtn.innerHTML = SVG_STOP + 'Stop Playback';
-        toggleBtn.classList.add('bg-red-500','hover:bg-red-600');
-    }
-}
-
-// ============================================================
-// MEDIAPIPE — init once, reuse everywhere
-// ============================================================
-async function initPose() {
-    if (poseReady) return true;
-    try {
-        pose = new Pose({
-            locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`
-        });
-        pose.setOptions({
-            modelComplexity: 1,
-            smoothLandmarks: true,
-            minDetectionConfidence: 0.5,
-            minTrackingConfidence: 0.5,
-        });
-        pose.onResults(onPoseResults);
-        await pose.initialize();
-        poseReady = true;
-        return true;
-    } catch (err) {
-        console.error('MediaPipe init failed:', err);
-        showFeedback('MediaPipe failed to load. Check your internet connection.', 'error');
-        return false;
-    }
-}
-
-function onPoseResults(results) {
-    canvasEl.width  = results.image.width;
-    canvasEl.height = results.image.height;
-    ctx.save();
-    ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
-    ctx.drawImage(results.image, 0, 0, canvasEl.width, canvasEl.height);
-    if (results.poseLandmarks) {
-        drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS,
-            { color: '#00FF00', lineWidth: 4 });
-        drawLandmarks(ctx, results.poseLandmarks,
-            { color: '#FF0000', lineWidth: 2, radius: 4 });
-    }
-    ctx.restore();
-}
-
-// ── LIVE webcam landmark loop ──
-let liveLoopRunning = false;
-function livePoseLoop() {
-    if (liveLoopRunning) return;
-    liveLoopRunning = true;
-
-        
-    if (audioFeedbackEnabled && !feedbackAudioInterval) {
-        feedbackAudioInterval = setInterval(speakCurrentFeedback, 7000);
-        startSpeechKeepAlive();
+    // 
+    // HELPERS
+    // 
+    function getCsrfToken() {
+        const el = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (el) return el.value;
+        for (const c of document.cookie.split('; '))
+            if (c.startsWith('csrftoken=')) return c.split('=')[1];
+        return '';
     }
 
-    const loop = async () => {
-        if (!sessionActive || isVideoMode) { liveLoopRunning = false; return; }
-        if (videoEl.readyState >= 2) {
-            try { await pose.send({ image: videoEl }); } catch (_) {}
-        }
-        requestAnimationFrame(loop);
-    };
-    requestAnimationFrame(loop);
-}
-
-// ── Video playback landmark loop ──
-let videoLoopRunning = false;
-function videoPoseLoop() {
-    if (videoLoopRunning) return;
-    videoLoopRunning = true;
-    const loop = async () => {
-        if (!sessionActive || !isVideoMode || videoEl.paused || videoEl.ended) {
-            videoLoopRunning = false; return;
-        }
-        if (videoEl.readyState >= 2) {
-            try { await pose.send({ image: videoEl }); } catch (_) {}
-        }
-        requestAnimationFrame(loop);
-    };
-    requestAnimationFrame(loop);
-}
-
-// ============================================================
-// WEBCAM
-// ============================================================
-async function startWebcam() {
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: currentCameraFacing, width: { ideal:640 }, height: { ideal:480 } }
-        });
-        // clear any uploaded video
-        if (videoEl.src) { URL.revokeObjectURL(videoEl.src); videoEl.src = ''; }
-        videoEl.srcObject = stream;
-
-        return await new Promise((resolve, reject) => {
-            videoEl.onloadedmetadata = () => {
-                canvasEl.width  = videoEl.videoWidth  || 640;
-                canvasEl.height = videoEl.videoHeight || 480;
-                videoEl.play().then(() => resolve(true)).catch(reject);
-            };
-            videoEl.onerror = () => reject(new Error('Video element error'));
-        });
-    } catch (err) {
-        console.error('Webcam error:', err);
-        showFeedback('Camera access denied or unavailable.', 'error');
-        return false;
-    }
-}
-
-function stopWebcam() {
-    if (videoEl.srcObject) {
-        videoEl.srcObject.getTracks().forEach(t => t.stop());
-        videoEl.srcObject = null;
-    }
-}
-
-// ============================================================
-// BACKEND SESSION
-// ============================================================
-async function startBackendSession() {
-    if (!targetPose) {
-        showFeedback('No pose selected. Please select a pose first.', 'error');
-        return false;
-    }
-    try {
-        const res  = await fetch(`${API_BASE_URL}/session/start/`, {
-            method: 'POST',
-            headers: { 'Content-Type':'application/json', 'X-CSRFToken': getCsrfToken() },
-            body: JSON.stringify({ pose: targetPose }),
-        });
-        const data = await res.json();
-        if (data.success) {
-            sessionId  = data.session_id;
-            targetPose = data.target_pose;
-            return true;
-        }
-        showFeedback('Failed to start session on server.', 'error');
-        return false;
-    } catch (err) {
-        console.error(err);
-        showFeedback('Cannot reach server.', 'error');
-        return false;
-    }
-}
-
-async function endBackendSession() {
-    if (!sessionId) return;
-    try {
-        const res  = await fetch(`${API_BASE_URL}/session/end/`, {
-            method: 'POST',
-            headers: { 'Content-Type':'application/json', 'X-CSRFToken': getCsrfToken() },
-            body: JSON.stringify({ session_id: sessionId }),
-        });
-        const data = await res.json();
-        if (data.success) showSessionSummary(data);
-    } catch (err) { console.error(err); }
-    sessionId = null;
-}
-
-// ============================================================
-// BACKEND FRAME DETECTION  (live mode only)
-// ============================================================
-async function sendFrameToBackend() {
-    if (!sessionActive || isVideoMode || videoEl.readyState < 2) return;
-    try {
-        const frame = canvasEl.toDataURL('image/jpeg', 0.7);
-        const res   = await fetch(`${API_BASE_URL}/detect/`, {
-            method: 'POST',
-            headers: { 'Content-Type':'application/json', 'X-CSRFToken': getCsrfToken() },
-            body: JSON.stringify({ frame, target_pose: targetPose, session_id: sessionId }),
-        });
-        handleDetectionResult(await res.json());
-    } catch (err) { console.error('Detection error:', err); }
-}
-
-// ============================================================
-// SHARED FEEDBACK BUILDER
-// // ============================================================
-// function applyPoseUI({ prediction, confidence, isCorrect, targetPoseName, backendFeedback, incrementFrames }) {
-//     const confPct   = (confidence * 100).toFixed(1);
-//     const isUnknown = !prediction || prediction === 'unknown' || confidence < 0.8;
-
-//     // What to show as the "Current Pose" label
-//     // If unknown/low confidence → "Unknown", else show the mistake label nicely
-//     const displayLabel = isUnknown ? 'Unknown' : poseLabelOf(prediction);
-//         console.log('applyPoseUI called:', { prediction, confidence, isCorrect });
-
-
-//     // ── Current Pose panel ──
-//     currentPoseEl.textContent   = displayLabel;
-//     confidenceEl.textContent    = confPct;
-//     confidenceBarEl.style.width = confPct + '%';
-//     confidenceBarEl.className   = 'h-2 rounded-full transition-all duration-500 ' +
-//         (confidence >= 0.8 ? 'bg-green-500' : confidence >= 0.5 ? 'bg-yellow-500' : 'bg-red-500');
-
-//     // ── Status indicator ──
-//     if (isCorrect && confidence >= 0.8) {
-//         statusIcon.className   = 'w-3 h-3 rounded-full bg-green-500 animate-pulse';
-//         statusText.textContent = 'Correct ✓';
-//         statusText.className   = 'text-sm font-medium text-green-700';
-//         if (incrementFrames) correctFrames++;
-//     } else {
-//         statusIcon.className   = 'w-3 h-3 rounded-full ' + (isUnknown ? 'bg-yellow-400' : 'bg-red-500');
-//         statusText.textContent = isUnknown ? 'Unclear ?' : 'Incorrect ✗';
-//         statusText.className   = 'text-sm font-medium ' + (isUnknown ? 'text-yellow-700' : 'text-red-700');
-//     }
-
-//     if (incrementFrames) { totalFrames++; updateStats(); }
-
-//     // ── Feedback message ──
-//     let msg, type;
-//     const tip = backendFeedback ? ` ${backendFeedback}` : '';
-
-//     if (isCorrect && confidence >= 0.8) {
-//         // Correct form
-//         msg  = `✓ Great form! You are holding ${poseLabelOf(targetPoseName)} correctly. (${confPct}% confidence)`;
-//         type = 'success';
-//     } else if (isUnknown) {
-//         if (confidence === 0) {
-//             msg =`⚠ Pose unclear - ${tip || 'try adjusting your position or lighting.'}`;
-//         }
-//         // Can't tell — either no prediction or confidence too low
-//         else if (confidence < 0.5) {
-//             msg  = `⚠ Pose unclear — make sure your full body is visible and the lighting is good.`;
-//         } 
-        
-//         else {
-//             msg  = `⚠ Almost there! Confidence is ${confPct}% — adjust your position slightly.`;
-//         }
-//         type = 'warning';
-//     } else {
-//         // Confident but wrong form — show the specific mistake + backend tip
-//         msg  = `✗ ${poseLabelOf(prediction)} detected. (${confPct}% confidence)${tip ? ' Tip: ' + tip : ''}`;
-//         type = 'error';
-//     }
-
-//     showFeedback(msg, type);
-// }
-
-function applyPoseUI({ prediction, confidence, isCorrect, targetPoseName, backendFeedback, incrementFrames }) {
-    const confPct   = (confidence * 100).toFixed(1);
-    
-    // ← Let backend decide unknown — it already applies per-pose threshold
-    const isUnknown = !prediction || prediction === 'unknown';
-
-    const displayLabel = isUnknown ? 'Unknown' : poseLabelOf(prediction);
-
-    // ── Current Pose panel ──
-    currentPoseEl.textContent   = displayLabel;
-    confidenceEl.textContent    = confPct;
-    confidenceBarEl.style.width = confPct + '%';
-    confidenceBarEl.className   = 'h-2 rounded-full transition-all duration-500 ' +
-        (confidence >= 0.8 ? 'bg-green-500' : confidence >= 0.5 ? 'bg-yellow-500' : 'bg-red-500');
-
-    // ── Status indicator ──
-    if (isCorrect && !isUnknown) {
-        statusIcon.className   = 'w-3 h-3 rounded-full bg-green-500 animate-pulse';
-        statusText.textContent = 'Correct ✓';
-        statusText.className   = 'text-sm font-medium text-green-700';
-        if (incrementFrames) correctFrames++;
-    } else {
-        statusIcon.className   = 'w-3 h-3 rounded-full ' + (isUnknown ? 'bg-yellow-400' : 'bg-red-500');
-        statusText.textContent = isUnknown ? 'Unclear ?' : 'Incorrect ✗';
-        statusText.className   = 'text-sm font-medium ' + (isUnknown ? 'text-yellow-700' : 'text-red-700');
+    function formatTime(s) {
+        const sec = Math.floor(s);
+        return String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0');
     }
 
-    if (incrementFrames) { totalFrames++; updateStats(); }
+    function poseLabelOf(raw) {
+        return raw ? raw.charAt(0).toUpperCase() + raw.slice(1).replace(/_/g, ' ') : '—';
+    }
 
-    // ── Feedback message ──
-    let msg, type;
+    function startSpeechKeepAlive() {
+        stopSpeechKeepAlive();
+        speechKeepAlive = setInterval(() => {
+            if (window.speechSynthesis && speechSynthesis.paused) speechSynthesis.resume();
+        }, 7000);
+    }
 
-    if (isCorrect && !isUnknown) {
-        msg  = `✓ Great form! You are holding ${poseLabelOf(targetPoseName)} correctly. (${confPct}% confidence)`;
-        type = 'success';
-    } else if (confidence < 0.5 && !isUnknown) {
-        // Predicted something but very low confidence — pose doesn't match well
-        msg  = `⚠ Pose doesn't seem to match — make sure your full body is visible and you're in the correct position.`;
-        type = 'warning';}
-    else if (backendFeedback) {
-        // Backend always sends specific feedback — show it
-        msg  = `✗ ${backendFeedback}`;
-        type = isUnknown ? 'warning' : 'error';
-    } else if (isUnknown) {
-        if (confidence === 0) {
-            msg = `⚠ Pose unclear — make sure your full body is visible and the lighting is good.`;
+    function stopSpeechKeepAlive() {
+        if (speechKeepAlive) { clearInterval(speechKeepAlive); speechKeepAlive = null; }
+    }
+
+    // 
+    // AUDIO FEEDBACK
+    // 
+    audioFeedbackBtn.addEventListener('click', () => {
+        audioFeedbackEnabled = !audioFeedbackEnabled;
+        if (audioFeedbackEnabled) {
+            audioFeedbackStatus.textContent = 'ON';
+            audioFeedbackStatus.className = 'text-sm font-semibold text-green-600';
+            audioFeedbackBtn.classList.remove('border-gray-300', 'text-gray-700');
+            audioFeedbackBtn.classList.add('border-green-500', 'text-green-700', 'bg-green-50');
+            const warmup = new SpeechSynthesisUtterance('');
+            speechSynthesis.speak(warmup);
+            if (sessionActive && !isVideoMode && !feedbackAudioInterval) {
+                feedbackAudioInterval = setInterval(speakCurrentFeedback, 7000);
+                startSpeechKeepAlive();
+            }
         } else {
-            msg = `⚠ Almost there! Confidence is ${confPct}% — adjust your position slightly.`;
+            audioFeedbackStatus.textContent = 'OFF';
+            audioFeedbackStatus.className = 'text-sm font-semibold text-gray-400';
+            audioFeedbackBtn.classList.add('border-gray-300', 'text-gray-700');
+            audioFeedbackBtn.classList.remove('border-green-500', 'text-green-700', 'bg-green-50');
+            stopAudioFeedback();
         }
-        type = 'warning';
-    } else {
-        msg  = `✗ ${poseLabelOf(prediction)} detected. (${confPct}% confidence)`;
-        type = 'error';
-    }
-
-    showFeedback(msg, type);
-}
-
-// ============================================================
-// DETECTION RESULT HANDLER  (live mode)
-// ============================================================
-function handleDetectionResult(result) {
-    if (!result.success) {
-        currentPoseEl.textContent   = 'No pose detected';
-        confidenceEl.textContent    = '0';
-        confidenceBarEl.style.width = '0%';
-        confidenceBarEl.className   = 'h-2 rounded-full bg-red-500 transition-all duration-500';
-        statusIcon.className        = 'w-3 h-3 rounded-full bg-red-500';
-        statusText.textContent      = 'Incorrect ✗';
-        statusText.className        = 'text-sm font-medium text-red-700';
-        showFeedback(result.message || '⚠ No pose detected — step back so your full body is visible.', 'error');
-        totalFrames++; updateStats(); return;
-    }
-
-    applyPoseUI({
-        prediction:      result.prediction,          // "correct" | "unknown" | wrong-label
-        // prediction:      best.prediction ?? best.pose,
-        confidence:      result.confidence,
-        isCorrect:       result.is_correct,
-        targetPoseName:  result.pose,                // target pose name
-        backendFeedback: result.feedback || '',
-        incrementFrames: true,
     });
-}
 
-// ============================================================
-// ▶ TOGGLE BUTTON — single handler
-// ============================================================
-toggleBtn.addEventListener('click', async () => {
-
-    // ── STOP ───────────────────────────────────────────────
-    if (sessionActive) {
-        isVideoMode ? await stopVideoPlayback() : await stopLiveSession();
-        return;
+    function stopAudioFeedback() {
+        if (feedbackAudioInterval) { clearInterval(feedbackAudioInterval); feedbackAudioInterval = null; }
+        if (window.speechSynthesis) speechSynthesis.cancel();
+        stopSpeechKeepAlive();
     }
 
-    // ── START: VIDEO MODE ──────────────────────────────────
-    if (isVideoMode && uploadedFile) {
+    function speakCurrentFeedback() {
+        if (!sessionActive || isVideoMode || !audioFeedbackEnabled) return;
+        const currentFeedback = feedbackEl.textContent;
+        if (!currentFeedback ||
+            currentFeedback.includes('Click "Start Session"') ||
+            currentFeedback.includes('Session started') ||
+            currentFeedback.includes('Initialising')) return;
+        speechSynthesis.cancel();
+        setTimeout(() => {
+            if (speechSynthesis.paused) speechSynthesis.resume();
+            const msg = new SpeechSynthesisUtterance(currentFeedback);
+            msg.lang = 'en-US'; msg.rate = 0.95; msg.volume = 1.0;
+            msg.onerror = (e) => console.warn('Speech error:', e.error);
+            speechSynthesis.speak(msg);
+        }, 200);
+    }
+
+    // 
+    // FEEDBACK UI
+    // 
+    const FEEDBACK_BASE = 'rounded-lg shadow-lg p-6 border-2 transition-all duration-300';
+    const FEEDBACK_STYLES = {
+        success: 'bg-green-50 border-green-500',
+        error: 'bg-red-50 border-red-500',
+        warning: 'bg-yellow-50 border-yellow-500',
+        info: 'bg-blue-50 border-blue-500',
+    };
+
+    function showFeedback(msg, type = 'info') {
+        feedbackEl.textContent = msg;
+        feedbackCard.className = FEEDBACK_BASE + ' ' + (FEEDBACK_STYLES[type] || FEEDBACK_STYLES.info);
+    }
+
+    function showSessionSummary(data) {
+        const m = Math.floor(data.duration_seconds / 60);
+        const s = Math.floor(data.duration_seconds % 60);
+        const grade = data.accuracy >= 80 ? 'Excellent! 🌟'
+            : data.accuracy >= 60 ? 'Good effort! 👍' : 'Keep practising! 💪';
+        showFeedback(
+            `Session Complete! 🎉\nPose: ${poseLabelOf(data.pose)}\n` +
+            `Duration: ${m}m ${s}s\nFrames: ${data.correct_frames}/${data.total_frames}\n` +
+            `Accuracy: ${data.accuracy.toFixed(1)}%\n${grade}`,
+            data.accuracy >= 70 ? 'success' : 'info'
+        );
+    }
+
+    // 
+    // STATS
+    // 
+    function resetCounters() {
+        sessionTime = totalFrames = correctFrames = 0;
+        updateStats();
+        timerEl.textContent = '00:00';
+        currentPoseEl.textContent = '—';
+        confidenceEl.textContent = '0';
+        confidenceBarEl.style.width = '0%';
+    }
+
+    function updateStats() {
+        totalFramesEl.textContent = totalFrames;
+        correctFramesEl.textContent = correctFrames;
+        const acc = totalFrames > 0 ? ((correctFrames / totalFrames) * 100).toFixed(1) : '0.0';
+        sessionAccuracyEl.textContent = acc + '%';
+    }
+
+    // 
+    // TOGGLE BUTTON APPEARANCE
+    // 
+    const SVG_PLAY = `<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
+    const SVG_STOP = `<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg>`;
+    const SVG_SPIN = `<svg class="animate-spin w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+
+    function setBtn(state) {
+        toggleBtn.disabled = (state === 'analyzing');
+        toggleBtn.classList.remove(
+            'bg-green-500', 'hover:bg-green-600', 'bg-red-500', 'hover:bg-red-600',
+            'opacity-60', 'cursor-not-allowed'
+        );
+        if (state === 'analyzing') {
+            toggleBtn.classList.add('bg-green-500', 'hover:bg-green-600', 'opacity-60', 'cursor-not-allowed');
+            toggleBtn.innerHTML = SVG_SPIN + 'Analyzing…';
+        } else if (state === 'start') {
+            toggleBtn.innerHTML = SVG_PLAY + 'Start Session';
+            toggleBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+        } else if (state === 'stop-live') {
+            toggleBtn.innerHTML = SVG_STOP + 'Stop Session';
+            toggleBtn.classList.add('bg-red-500', 'hover:bg-red-600');
+        } else if (state === 'analyze') {
+            toggleBtn.innerHTML = SVG_PLAY + 'Analyze Video';
+            toggleBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+        } else if (state === 'stop-video') {
+            toggleBtn.innerHTML = SVG_STOP + 'Stop Playback';
+            toggleBtn.classList.add('bg-red-500', 'hover:bg-red-600');
+        }
+    }
+
+    // 
+    // VIDEO CONTROLS
+    // Shows custom play/pause/seek overlay during video mode playback.
+    // 
+
+    // Show / hide the controls bar
+    function showVideoControls(show) {
+        videoControls.style.display = show ? 'block' : 'none';
+    }
+
+    // Update seek bar + time display on every RAF tick (called from syncUIToPlayback)
+    function updateSeekBar() {
+        if (!videoEl.duration || isNaN(videoEl.duration)) return;
+        const pct = (videoEl.currentTime / videoEl.duration) * 100;
+        seekBarFill.style.width = pct + '%';
+        seekBarThumb.style.left = pct + '%';
+        vcCurrentTime.textContent = formatTime(videoEl.currentTime);
+        vcDuration.textContent = formatTime(videoEl.duration);
+    }
+
+    // Sync play/pause icon to actual video state
+    function syncPlayPauseIcon() {
+        if (videoEl.paused) {
+            vcPauseIcon.classList.add('hidden');
+            vcPlayIcon.classList.remove('hidden');
+        } else {
+            vcPauseIcon.classList.remove('hidden');
+            vcPlayIcon.classList.add('hidden');
+        }
+    }
+
+    // Play / Pause button
+    vcPlayPause.addEventListener('click', () => {
+        if (!sessionActive || !isVideoMode) return;
+        if (videoEl.paused) {
+            videoEl.play().catch(() => { });
+        } else {
+            videoEl.pause();
+        }
+        syncPlayPauseIcon();
+    });
+
+    // Speed toggle: 0.5x <-> 1x
+    vcSpeed.addEventListener('click', () => {
+        if (!sessionActive || !isVideoMode) return;
+        if (videoEl.playbackRate === 0.5) {
+            videoEl.playbackRate = 1.0;
+            vcSpeed.textContent = '1×';
+        } else {
+            videoEl.playbackRate = 0.5;
+            vcSpeed.textContent = '0.5×';
+        }
+    });
+
+    // Seek bar — click to seek
+    seekBarTrack.addEventListener('click', (e) => {
+        if (!sessionActive || !isVideoMode || !videoEl.duration) return;
+        const rect = seekBarTrack.getBoundingClientRect();
+        const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        videoEl.currentTime = pct * videoEl.duration;
+        updateSeekBar();
+    });
+
+    // Seek bar — drag to seek
+    let seekDragging = false;
+    seekBarTrack.addEventListener('mousedown', (e) => {
+        if (!sessionActive || !isVideoMode) return;
+        seekDragging = true;
+        e.preventDefault();
+    });
+    document.addEventListener('mousemove', (e) => {
+        if (!seekDragging) return;
+        const rect = seekBarTrack.getBoundingClientRect();
+        const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        if (videoEl.duration) {
+            videoEl.currentTime = pct * videoEl.duration;
+            updateSeekBar();
+        }
+    });
+    document.addEventListener('mouseup', () => { seekDragging = false; });
+
+    // Touch support for seek bar
+    seekBarTrack.addEventListener('touchstart', (e) => {
+        if (!sessionActive || !isVideoMode) return;
+        seekDragging = true;
+        e.preventDefault();
+    }, { passive: false });
+    document.addEventListener('touchmove', (e) => {
+        if (!seekDragging) return;
+        const touch = e.touches[0];
+        const rect = seekBarTrack.getBoundingClientRect();
+        const pct = Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width));
+        if (videoEl.duration) {
+            videoEl.currentTime = pct * videoEl.duration;
+            updateSeekBar();
+        }
+    }, { passive: true });
+    document.addEventListener('touchend', () => { seekDragging = false; });
+
+    // Video play/seek event listeners to restart drawing loop and update skeleton
+    videoEl.addEventListener('play', () => {
+        if (sessionActive && isVideoMode) {
+            videoPoseLoop();
+            if (!timerInterval) {
+                timerInterval = setInterval(() => { sessionTime++; timerEl.textContent = formatTime(sessionTime); }, 1000);
+            }
+        }
+    });
+
+    videoEl.addEventListener('pause', () => {
+        if (sessionActive && isVideoMode && timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+    });
+
+    videoEl.addEventListener('seeked', async () => {
+        if (sessionActive && isVideoMode && poseReady && videoEl.paused) {
+            if (videoEl.readyState >= 2) {
+                try { await pose.send({ image: videoEl }); } catch (_) { }
+            }
+        }
+    });
+
+    // 
+    // MEDIAPIPE
+    // 
+    async function initPose() {
+        if (poseReady) return true;
+        try {
+            pose = new Pose({
+                locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`
+            });
+            pose.setOptions({
+                modelComplexity: 1,
+                smoothLandmarks: true,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5,
+            });
+            pose.onResults(onPoseResults);
+            await pose.initialize();
+            poseReady = true;
+            return true;
+        } catch (err) {
+            console.error('MediaPipe init failed:', err);
+            showFeedback('MediaPipe failed to load. Check your internet connection.', 'error');
+            return false;
+        }
+    }
+
+    function onPoseResults(results) {
+        canvasEl.width = results.image.width;
+        canvasEl.height = results.image.height;
+        ctx.save();
+        ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+        const shouldMirror = !isVideoMode && currentCameraFacing === 'user';
+        if (shouldMirror) {
+            videoEl.style.transform = 'scaleX(-1)';
+            ctx.translate(canvasEl.width, 0);
+            ctx.scale(-1, 1);
+        } else {
+            videoEl.style.transform = 'none';
+        }
+        ctx.drawImage(results.image, 0, 0, canvasEl.width, canvasEl.height);
+        if (results.poseLandmarks) {
+            drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS,
+                { color: '#00FF00', lineWidth: 4 });
+            drawLandmarks(ctx, results.poseLandmarks,
+                { color: '#FF0000', lineWidth: 2, radius: 4 });
+        }
+        ctx.restore();
+    }
+
+    function livePoseLoop() {
+        const gen = ++liveLoopGen;
+        if (audioFeedbackEnabled && !feedbackAudioInterval) {
+            feedbackAudioInterval = setInterval(speakCurrentFeedback, 7000);
+            startSpeechKeepAlive();
+        }
+        const loop = async () => {
+            if (gen !== liveLoopGen || !sessionActive || isVideoMode) return;
+            if (videoEl.readyState >= 2) {
+                try { await pose.send({ image: videoEl }); } catch (_) { }
+            }
+            requestAnimationFrame(loop);
+        };
+        requestAnimationFrame(loop);
+    }
+
+    function videoPoseLoop() {
+        const gen = ++videoLoopGen;
+        const loop = async () => {
+            if (gen !== videoLoopGen || !sessionActive || !isVideoMode
+                || videoEl.paused || videoEl.ended) return;
+            if (videoEl.readyState >= 2) {
+                try { await pose.send({ image: videoEl }); } catch (_) { }
+            }
+            requestAnimationFrame(loop);
+        };
+        requestAnimationFrame(loop);
+    }
+
+    // 
+    // WEBCAM
+    // 
+    async function startWebcam() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: currentCameraFacing, width: { ideal: 640 }, height: { ideal: 480 } }
+            });
+            if (videoEl.src && videoEl.src.startsWith('blob:')) {
+                URL.revokeObjectURL(videoEl.src);
+            }
+            videoEl.src = '';
+            videoEl.srcObject = stream;
+            videoEl.loop = false;
+            return await new Promise((resolve, reject) => {
+                videoEl.onloadedmetadata = () => {
+                    canvasEl.width = videoEl.videoWidth || 640;
+                    canvasEl.height = videoEl.videoHeight || 480;
+                    captureCanvas.width = canvasEl.width;
+                    captureCanvas.height = canvasEl.height;
+                    videoEl.play().then(() => resolve(true)).catch(reject);
+                };
+                videoEl.onerror = () => reject(new Error('Video element error'));
+            });
+        } catch (err) {
+            console.error('Webcam error:', err);
+            showFeedback('Camera access denied or unavailable.', 'error');
+            return false;
+        }
+    }
+
+    function stopWebcam() {
+        if (videoEl.srcObject) {
+            videoEl.srcObject.getTracks().forEach(t => t.stop());
+            videoEl.srcObject = null;
+        }
+        videoEl.style.transform = 'none';
+    }
+
+    // 
+    // BACKEND SESSION
+    // 
+    async function startBackendSession() {
         if (!targetPose) {
-            showFeedback('Please select a pose before analyzing the video.', 'error');
+            showFeedback('No pose selected. Please select a pose first.', 'error');
+            return false;
+        }
+        try {
+            const res = await fetch(`${API_BASE_URL}/session/start/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                body: JSON.stringify({ pose: targetPose }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                sessionId = data.session_id;
+                targetPose = data.target_pose;
+                return true;
+            }
+            showFeedback('Failed to start session on server.', 'error');
+            return false;
+        } catch (err) {
+            console.error(err);
+            showFeedback('Cannot reach server.', 'error');
+            return false;
+        }
+    }
+
+    async function endBackendSession() {
+        if (!sessionId) return;
+        try {
+            const res = await fetch(`${API_BASE_URL}/session/end/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                body: JSON.stringify({ session_id: sessionId }),
+            });
+            const data = await res.json();
+            if (data.success) showSessionSummary(data);
+        } catch (err) { console.error(err); }
+        sessionId = null;
+    }
+
+    // 
+    // BACKEND FRAME DETECTION (live mode)
+    // 
+    async function sendFrameToBackend() {
+        if (!sessionActive || isVideoMode || videoEl.readyState < 2) return;
+        const vw = videoEl.videoWidth;
+        const vh = videoEl.videoHeight;
+        if (!vw || !vh) return;
+        try {
+            captureCanvas.width = vw;
+            captureCanvas.height = vh;
+
+            captureCtx.drawImage(videoEl, 0, 0);
+
+            const frame = captureCanvas.toDataURL('image/jpeg', 0.7);
+            const res = await fetch(`${API_BASE_URL}/detect/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                body: JSON.stringify({ frame, target_pose: targetPose, session_id: sessionId }),
+            });
+            handleDetectionResultSmoothed(await res.json());
+        } catch (err) { console.error('Detection error:', err); }
+    }
+
+    // 
+    // POSE UI
+    // 
+    function applyPoseUI({ prediction, confidence, isCorrect, targetPoseLabel, backendFeedback, incrementFrames }) {
+        const confPct = (confidence * 100).toFixed(1);
+        const isUnknown = !prediction || prediction === 'unknown';
+        const displayLabel = isUnknown ? 'Unknown' : poseLabelOf(prediction);
+
+        currentPoseEl.textContent = displayLabel;
+        confidenceEl.textContent = confPct;
+        confidenceBarEl.style.width = confPct + '%';
+        confidenceBarEl.className = 'h-2 rounded-full transition-all duration-500 ' +
+            (confidence >= 0.8 ? 'bg-green-500' : confidence >= 0.5 ? 'bg-yellow-500' : 'bg-red-500');
+
+        if (isCorrect && !isUnknown) {
+            statusIcon.className = 'w-3 h-3 rounded-full bg-green-500 animate-pulse';
+            statusText.textContent = 'Correct ✓';
+            statusText.className = 'text-sm font-medium text-green-700';
+            if (incrementFrames) correctFrames++;
+        } else {
+            statusIcon.className = 'w-3 h-3 rounded-full ' + (isUnknown ? 'bg-yellow-400' : 'bg-red-500');
+            statusText.textContent = isUnknown ? 'Unclear ?' : 'Incorrect ✗';
+            statusText.className = 'text-sm font-medium ' + (isUnknown ? 'text-yellow-700' : 'text-red-700');
+        }
+
+        if (incrementFrames) { totalFrames++; updateStats(); }
+
+        let msg, type;
+        if (isCorrect && !isUnknown) {
+            msg = `✓ Great form! You are holding ${poseLabelOf(targetPoseLabel)} correctly. (${confPct}% confidence)`;
+            type = 'success';
+        } else if (isUnknown) {
+            msg = confidence === 0
+                ? `⚠ Pose unclear — make sure your full body is visible and the lighting is good.`
+                : `⚠ Almost there! Confidence is ${confPct}% — adjust your position slightly.`;
+            type = 'warning';
+        } else if (backendFeedback) {
+            msg = `✗ ${backendFeedback}`;
+            type = 'error';
+        } else {
+            msg = `✗ ${poseLabelOf(prediction)} detected. (${confPct}% confidence)`;
+            type = 'error';
+        }
+        showFeedback(msg, type);
+    }
+
+    function handleDetectionResult(result) {
+        if (!result.success) {
+            currentPoseEl.textContent = 'No pose detected';
+            confidenceEl.textContent = '0';
+            confidenceBarEl.style.width = '0%';
+            confidenceBarEl.className = 'h-2 rounded-full bg-red-500 transition-all duration-500';
+            statusIcon.className = 'w-3 h-3 rounded-full bg-yellow-400';
+            statusText.textContent = 'Unclear ?';
+            statusText.className = 'text-sm font-medium text-yellow-700';
+            showFeedback(result.message || '⚠ No pose detected — step back so your full body is visible.', 'warning');
+            totalFrames++; updateStats(); return;
+        }
+        applyPoseUI({
+            prediction: result.prediction,
+            confidence: result.confidence,
+            isCorrect: result.is_correct,
+            targetPoseLabel: result.pose,
+            backendFeedback: result.feedback || '',
+            incrementFrames: true,
+        });
+    }
+
+    // 
+    // PREDICTION SMOOTHER
+    // 
+    class PredictionSmoother {
+        constructor(windowSize = 6) {
+            this.window = [];
+            this.maxWindow = windowSize;
+        }
+
+        update(result) {
+            if (!result || !result.success) {
+                this.window.push({
+                    prediction: 'unknown',
+                    is_correct: false,
+                    confidence: 0,
+                    feedback: result ? (result.message || '') : '',
+                    pose: result ? result.pose : ''
+                });
+            } else {
+                this.window.push(result);
+            }
+            if (this.window.length > this.maxWindow) this.window.shift();
+
+            const predCounts = {};
+            this.window.forEach(r => {
+                const p = r.prediction || 'unknown';
+                predCounts[p] = (predCounts[p] || 0) + 1;
+            });
+            const majorityPrediction = Object.keys(predCounts).reduce((a, b) => predCounts[a] > predCounts[b] ? a : b);
+
+            const matchingFrames = this.window.filter(r => (r.prediction || 'unknown') === majorityPrediction);
+            const avgConfidence = matchingFrames.reduce((sum, r) => sum + (r.confidence || 0), 0) / matchingFrames.length;
+
+            let correctCount = 0;
+            matchingFrames.forEach(r => { if (r.is_correct) correctCount++; });
+            const majorityIsCorrect = correctCount >= (matchingFrames.length / 2);
+
+            let finalFeedback = '';
+            for (let i = matchingFrames.length - 1; i >= 0; i--) {
+                if (matchingFrames[i].is_correct === majorityIsCorrect && matchingFrames[i].feedback) {
+                    finalFeedback = matchingFrames[i].feedback;
+                    break;
+                }
+            }
+            if (!finalFeedback && matchingFrames.length > 0) {
+                for (let i = matchingFrames.length - 1; i >= 0; i--) {
+                    if (matchingFrames[i].feedback) {
+                        finalFeedback = matchingFrames[i].feedback;
+                        break;
+                    }
+                }
+            }
+
+            const lastPose = this.window[this.window.length - 1].pose;
+
+            return {
+                success: majorityPrediction !== 'unknown',
+                prediction: majorityPrediction,
+                confidence: avgConfidence,
+                is_correct: majorityIsCorrect,
+                pose: lastPose,
+                feedback: finalFeedback,
+                message: majorityPrediction === 'unknown' ? finalFeedback : ''
+            };
+        }
+
+        reset() { this.window = []; }
+    }
+
+    const smoother = new PredictionSmoother(10);
+
+    function handleDetectionResultSmoothed(result) {
+        const smoothedResult = smoother.update(result);
+        if (!smoothedResult.success) {
+            currentPoseEl.textContent = 'No pose detected';
+            confidenceEl.textContent = '0';
+            confidenceBarEl.style.width = '0%';
+            confidenceBarEl.className = 'h-2 rounded-full bg-red-500 transition-all duration-500';
+            statusIcon.className = 'w-3 h-3 rounded-full bg-yellow-400';
+            statusText.textContent = 'Unclear ?';
+            statusText.className = 'text-sm font-medium text-yellow-700';
+            showFeedback(smoothedResult.message || '⚠ No pose detected — step back so your full body is visible.', 'warning');
+            totalFrames++; updateStats(); return;
+        }
+        applyPoseUI({
+            prediction: smoothedResult.prediction,
+            confidence: smoothedResult.confidence,
+            isCorrect: smoothedResult.is_correct,
+            targetPoseLabel: smoothedResult.pose,
+            backendFeedback: smoothedResult.feedback || '',
+            incrementFrames: true,
+        });
+    }
+
+    // 
+    // TOGGLE BUTTON
+    // 
+    let toggleBusy = false;
+
+    toggleBtn.addEventListener('click', async () => {
+        if (toggleBusy) return;
+        toggleBusy = true;
+        try {
+            await handleToggle();
+        } finally {
+            toggleBusy = false;
+        }
+    });
+
+    async function handleToggle() {
+        if (sessionActive) {
+            if (isVideoMode) { await stopVideoPlayback(); } else { await stopLiveSession(); }
             return;
         }
+        if (isVideoMode && uploadedFile) {
+            if (!targetPose) {
+                showFeedback('Please select a pose before analyzing the video.', 'error'); return;
+            }
+            await startVideoAnalysis();
+            return;
+        }
+        await startLiveSession();
+    }
 
-        // 1. Upload to backend
+    function announceSessionStart(isVideo) {
+        if (!window.speechSynthesis) return;
+        speechSynthesis.cancel();
+        const text = isVideo
+            ? 'Analyzing your video. Please wait.'
+            : 'Please perform the selected pose carefully. Wear fitting clothes. If you feel pain, stop immediately.';
+        const msg = new SpeechSynthesisUtterance(text);
+        msg.lang = 'en-US';
+        speechSynthesis.speak(msg);
+    }
+
+    // 
+    // VIDEO ANALYSIS
+    // 
+    async function startVideoAnalysis() {
         setBtn('analyzing');
-        showFeedback('Uploading video to server for analysis…', 'info');
+
+        // Show the full-screen uploading overlay on the video panel
+        uploadingOverlayMsg.textContent = 'Analyzing video…';
+        uploadingOverlay.style.display = 'flex';
+        overlay.classList.add('hidden');
+
+        showFeedback('Analyzing video on server…', 'info');
+        announceSessionStart(true);
 
         const formData = new FormData();
         formData.append('video', uploadedFile);
@@ -845,13 +1088,10 @@ toggleBtn.addEventListener('click', async () => {
 
         let result;
         try {
-            // NOTE: Do NOT set Content-Type manually for FormData —
-            // the browser must set it with the correct multipart boundary.
-            // CSRF token goes in the header instead.
             const res = await fetch('/api/yoga/analyze_video/', {
                 method: 'POST',
                 headers: { 'X-CSRFToken': getCsrfToken() },
-                body: formData
+                body: formData,
             });
             if (!res.ok) {
                 const e = await res.json().catch(() => ({}));
@@ -860,17 +1100,30 @@ toggleBtn.addEventListener('click', async () => {
             result = await res.json();
         } catch (err) {
             console.error(err);
+            uploadingOverlay.style.display = 'none';
+            overlay.classList.remove('hidden');
             showFeedback(`Video analysis failed: ${err.message}`, 'error');
-            setBtn('analyze'); return;
+            setBtn('analyze');
+            toggleBtn.disabled = false;
+            return;
         }
 
-        // 2. Store predictions for synced playback, reset live counters
-        const predictions     = result.predictions   || [];
-        const overallAccuracy = result.accuracy      || 0;
-        const totalAnalyzed   = result.analyzed_frames || 0;
-        const totalCorrect    = result.correct_frames  || 0;
+        uploadingOverlay.style.display = 'none';
+
+        const predictions = result.predictions || [];
+        const overallAccuracy = result.accuracy || 0;
+        const totalAnalyzed = result.analyzed_frames || 0;
+        const totalCorrect = result.correct_frames || 0;
 
         totalFrames = 0; correctFrames = 0; updateStats();
+
+        if (predictions.length === 0) {
+            showFeedback('No poses detected in the video. Make sure your full body is visible.', 'warning');
+            setBtn('analyze');
+            toggleBtn.disabled = false;
+            overlay.classList.add('hidden');
+            return;
+        }
 
         showFeedback(
             `Analysis complete! Overall accuracy: ${overallAccuracy.toFixed(1)}% ` +
@@ -878,7 +1131,12 @@ toggleBtn.addEventListener('click', async () => {
             overallAccuracy >= 70 ? 'success' : 'warning'
         );
 
-        // 3. Set up UI for playback
+        // Store globally sorted predictions
+        sortedPreds = [...predictions].sort((a, b) => a.timestamp_sec - b.timestamp_sec);
+
+        const mpOk = await initPose();
+        if (!mpOk) { setBtn('analyze'); toggleBtn.disabled = false; return; }
+
         sessionActive = true;
         setBtn('stop-video');
         liveBadge.textContent = 'VIDEO';
@@ -887,308 +1145,343 @@ toggleBtn.addEventListener('click', async () => {
         targetPoseCard.classList.remove('hidden');
         targetPoseName.textContent = poseLabelOf(targetPose);
         overlay.classList.add('hidden');
+        toggleBtn.disabled = false;
 
-        // 4. Init MediaPipe for skeleton drawing
-        const mpOk = await initPose();
-        if (!mpOk) { sessionActive = false; setBtn('analyze'); return; }
+        // Ensure canvas dimensions are correct
+        const w = videoEl.videoWidth || 640;
+        const h = videoEl.videoHeight || 480;
+        canvasEl.width = w; canvasEl.height = h;
+        captureCanvas.width = w; captureCanvas.height = h;
 
-        // 5. Rewind and play at half speed
-        videoEl.currentTime  = 0;
+        videoEl.currentTime = 0;
         videoEl.playbackRate = 0.5;
+        videoEl.loop = false; // Never loop
+        vcSpeed.textContent = '0.5×';  // Reset speed toggle label
         sessionTime = 0;
+        timerEl.textContent = '00:00';
 
-        timerInterval = setInterval(() => {
-            sessionTime++;
-            timerEl.textContent = formatTime(sessionTime);
-        }, 1000);
+        // Show custom video controls
+        showVideoControls(true);
+        syncPlayPauseIcon();
+        updateSeekBar();
 
         try {
             await videoEl.play();
+            syncPlayPauseIcon();
         } catch (err) {
             console.error('Video play failed:', err);
-            showFeedback('Could not play video.', 'error');
-            sessionActive = false; setBtn('analyze');
-            clearInterval(timerInterval); return;
+            showFeedback('Could not play video. Try a different file format.', 'error');
+            sessionActive = false;
+            setBtn('analyze');
+            showVideoControls(false);
+            return;
         }
 
-        // 6. MediaPipe skeleton drawing loop
-        videoPoseLoop();
+        // Sync UI: predictions overlay + seek bar update
+        const myGen = ++syncUIGen;
+        let lastShownTs = -1;
 
-        // 7. Synced UI update loop — reads videoEl.currentTime each frame,
-        //    finds the matching prediction and updates all panels live
-        let lastShownFrame   = -1;
-        let shownFrameCount  = 0;
-        let shownCorrectCount = 0;
-
-        function syncUIToPlayback() {
-            if (!sessionActive || !isVideoMode) return;
-
-            const t = videoEl.currentTime;  // current playback position in seconds
-
-            // Walk backwards through predictions to find the last one at or before t
-            let best = null;
-            for (let i = predictions.length - 1; i >= 0; i--) {
-                if (predictions[i].timestamp_sec <= t + 0.15) {
-                    best = predictions[i]; break;
+        function findPredAt(t) {
+            let lo = 0, hi = sortedPreds.length - 1, best = null;
+            while (lo <= hi) {
+                const mid = (lo + hi) >> 1;
+                if (sortedPreds[mid].timestamp_sec <= t + 0.1) {
+                    best = sortedPreds[mid]; lo = mid + 1;
+                } else {
+                    hi = mid - 1;
                 }
             }
+            return best;
+        }
 
-            if (best && best.frame !== lastShownFrame) {
-                lastShownFrame = best.frame;
-                shownFrameCount++;
-                if (best.is_correct) shownCorrectCount++;
+        function syncUIToPlayback() {
+            if (myGen !== syncUIGen || !sessionActive || !isVideoMode) return;
 
-                totalFrames   = shownFrameCount;
-                correctFrames = shownCorrectCount;
-                updateStats();
+            updateSeekBar();
+            syncPlayPauseIcon();
 
-                // best.pose in video predictions holds the detected label
+            const t = videoEl.currentTime;
+
+            // Dynamically calculate accuracy metrics up to current playback time
+            let playedFrames = 0;
+            let playedCorrect = 0;
+            for (const pred of sortedPreds) {
+                if (pred.timestamp_sec <= t) {
+                    playedFrames++;
+                    if (pred.is_correct) {
+                        playedCorrect++;
+                    }
+                }
+            }
+            totalFrames = playedFrames;
+            correctFrames = playedCorrect;
+            updateStats();
+
+            const best = findPredAt(t);
+            if (best && best.timestamp_sec !== lastShownTs) {
+                lastShownTs = best.timestamp_sec;
                 applyPoseUI({
-                    // prediction:      best.prediction,
-                    prediction:      best.prediction ?? best.pose,
-                    confidence:      best.confidence,
-                    isCorrect:       best.is_correct,
-                    targetPoseName:  targetPose,
+                    prediction: best.prediction,
+                    confidence: best.confidence,
+                    isCorrect: best.is_correct,
+                    targetPoseLabel: targetPose,
                     backendFeedback: best.feedback || '',
-                    incrementFrames: false,   // counts managed above
+                    incrementFrames: false,
                 });
             }
-
             requestAnimationFrame(syncUIToPlayback);
         }
         requestAnimationFrame(syncUIToPlayback);
-
-        // 8. Auto-stop when video ends
-        videoEl.addEventListener('ended', async () => {
-            if (sessionActive && isVideoMode) await stopVideoPlayback();
-        }, { once: true });
-
-        return;
     }
 
-    // ── START: LIVE MODE ───────────────────────────────────
-    showFeedback('Initialising camera…', 'info');
+    // 
+    // LIVE SESSION
+    // 
+    async function startLiveSession() {
+        showFeedback('Initialising camera…', 'info');
+        announceSessionStart(false);
 
-    const mpOk = await initPose();
-    if (!mpOk) return;
+        const mpOk = await initPose();
+        if (!mpOk) return;
 
-    const camOk = await startWebcam();
-    if (!camOk) return;
+        const camOk = await startWebcam();
+        if (!camOk) return;
 
-    const srvOk = await startBackendSession();
-    if (!srvOk) { stopWebcam(); return; }
+        const srvOk = await startBackendSession();
+        if (!srvOk) { stopWebcam(); return; }
 
-    sessionActive = true;
-    setBtn('stop-live');
-    overlay.classList.add('hidden');
-    liveBadge.textContent = 'LIVE';
-    liveBadge.classList.remove('hidden');
-    accuracyIndicator.classList.remove('hidden');
-    targetPoseCard.classList.remove('hidden');
-    targetPoseName.textContent = poseLabelOf(targetPose);
-
-    resetCounters();
-    showFeedback('Session started! Hold your pose…', 'info');
-
-    timerInterval = setInterval(() => {
-        sessionTime++;
-        timerEl.textContent = formatTime(sessionTime);
-    }, 1000);
-
-    livePoseLoop();
-
-    setTimeout(() => {
-        if (sessionActive && !isVideoMode)
-            detectionInterval = setInterval(sendFrameToBackend, DETECTION_INTERVAL);
-    }, 1500);
-});
-
-// ============================================================
-// STOP HELPERS
-// ============================================================
-async function stopLiveSession() {
-    sessionActive    = false;
-    liveLoopRunning  = false;   // allow loop to restart next session
-    clearInterval(detectionInterval); detectionInterval = null;
-    clearInterval(timerInterval);     timerInterval     = null;
-
-    await endBackendSession();
-    stopWebcam();
-    ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
-
-    overlay.classList.remove('hidden');
-    liveBadge.classList.add('hidden');
-    accuracyIndicator.classList.add('hidden');
-    targetPoseCard.classList.add('hidden');
-    setBtn('start');
-    resetCounters();
-
-    // Restore original targetPose from page
-    targetPose = {% if selected_pose %}'{{ selected_pose }}'{% else %}null{% endif %};
-
-        
-    clearInterval(feedbackAudioInterval);
-    feedbackAudioInterval = null;
-    speechSynthesis.cancel();
-    lastSpokenFeedback = '';
-    stopSpeechKeepAlive();
-    
-}
-
-async function stopVideoPlayback() {
-    sessionActive    = false;
-    videoLoopRunning = false;   // allow loop to restart on re-analyze
-    videoEl.pause();
-    clearInterval(timerInterval); timerInterval = null;
-
-    liveBadge.classList.add('hidden');
-    liveBadge.textContent = 'LIVE';
-    accuracyIndicator.classList.add('hidden');
-    targetPoseCard.classList.add('hidden');
-    setBtn('analyze');
-    showFeedback('Playback stopped. Click "Analyze Video" to replay, or upload a new video.', 'info');
-}
-
-// ============================================================
-// SWITCH CAMERA
-// ============================================================
-switchCameraBtn.addEventListener('click', async () => {
-    if (!sessionActive || isVideoMode) {
-        showFeedback('Start a live session first to switch camera.', 'info');
-        return;
-    }
-    const prev = currentCameraFacing;
-    currentCameraFacing = prev === 'user' ? 'environment' : 'user';
-    stopWebcam();
-    const ok = await startWebcam();
-    if (!ok) {
-        currentCameraFacing = prev;   // revert
-        await startWebcam();
-        showFeedback('Could not switch camera.', 'error');
-    } else {
-        livePoseLoop();
-        showFeedback('Camera switched.', 'info');
-    }
-});
-
-// ============================================================
-// VIDEO UPLOAD
-// ============================================================
-videoUploadInput.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('video/')) {
-        showFeedback('Please upload a valid video file.', 'error'); return;
-    }
-    if (file.size > 100 * 1024 * 1024) {
-        showFeedback('File too large (max 100 MB).', 'error'); return;
-    }
-
-    showFeedback('Loading video…', 'info');
-
-    try {
-        if (sessionActive && !isVideoMode) await stopLiveSession();
-        if (videoEl.srcObject) stopWebcam();
-        if (videoEl.src) { URL.revokeObjectURL(videoEl.src); videoEl.src = ''; }
-
-        videoEl.srcObject = null;
-        videoEl.src = URL.createObjectURL(file);
-        videoEl.load();
-
-        await new Promise((resolve, reject) => {
-            videoEl.onloadedmetadata = () => {
-                canvasEl.width  = videoEl.videoWidth  || 640;
-                canvasEl.height = videoEl.videoHeight || 480;
-                resolve();
-            };
-            videoEl.onerror = () => reject(new Error('Video failed to load'));
-            setTimeout(() => reject(new Error('Load timed out')), 10000);
-        });
-
-        uploadedFile = file;
-        isVideoMode  = true;
-
-        initPose(); // pre-warm MediaPipe in background
-
+        smoother.reset();
+        sessionActive = true;
+        setBtn('stop-live');
         overlay.classList.add('hidden');
-        videoEl.pause();
-        videoEl.currentTime = 0;
+        liveBadge.textContent = 'LIVE';
+        liveBadge.classList.remove('hidden');
+        accuracyIndicator.classList.remove('hidden');
+        targetPoseCard.classList.remove('hidden');
+        targetPoseName.textContent = poseLabelOf(targetPose);
 
-        // Draw first frame as preview
-        videoEl.addEventListener('seeked', () => {
-            if (videoEl.readyState >= 2) {
-                canvasEl.width  = videoEl.videoWidth;
-                canvasEl.height = videoEl.videoHeight;
-                ctx.drawImage(videoEl, 0, 0, canvasEl.width, canvasEl.height);
+        resetCounters();
+        showFeedback('Session started! Hold your pose…', 'info');
+
+        timerInterval = setInterval(() => { sessionTime++; timerEl.textContent = formatTime(sessionTime); }, 1000);
+
+        livePoseLoop();
+
+        setTimeout(() => {
+            if (sessionActive && !isVideoMode) {
+                if (!videoEl.videoWidth || !videoEl.videoHeight) {
+                    setTimeout(() => {
+                        if (sessionActive && !isVideoMode)
+                            detectionInterval = setInterval(sendFrameToBackend, DETECTION_INTERVAL);
+                    }, 500);
+                    return;
+                }
+                detectionInterval = setInterval(sendFrameToBackend, DETECTION_INTERVAL);
             }
-        }, { once: true });
+        }, 1500);
+    }
 
-        uploadBtn.classList.add('hidden');
-        removeVideoBtn.classList.remove('hidden');
-        removeVideoBtn.classList.add('flex');
+    // 
+    // STOP HELPERS
+    // 
+    async function stopLiveSession() {
+        sessionActive = false;
+        liveLoopGen++;
+
+        clearInterval(detectionInterval); detectionInterval = null;
+        clearInterval(timerInterval); timerInterval = null;
+        stopAudioFeedback();
+
+        await endBackendSession();
+        stopWebcam();
+        ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+
+        overlay.classList.remove('hidden');
+        liveBadge.classList.add('hidden');
+        accuracyIndicator.classList.add('hidden');
+        targetPoseCard.classList.add('hidden');
+        setBtn('start');
+        targetPose = {% if selected_pose %} '{{ selected_pose }}'{% else %} null{% endif %};
+    showFeedback('Session ended. Click "Start Session" to begin again.', 'info');
+    }
+
+    async function stopVideoPlayback() {
+        sessionActive = false;
+        videoLoopGen++;
+        syncUIGen++;
+
+        videoEl.pause();
+        clearInterval(timerInterval); timerInterval = null;
+
+        liveBadge.classList.add('hidden');
+        liveBadge.textContent = 'LIVE';
+        accuracyIndicator.classList.add('hidden');
+        targetPoseCard.classList.add('hidden');
+
+        // Hide video controls
+        showVideoControls(false);
+
+        // Keep isVideoMode/uploadedFile so user can click "Analyze Video" again
         setBtn('analyze');
-        showFeedback(`"${file.name}" loaded. Click "Analyze Video" to start.`, 'success');
-
-    } catch (err) {
-        console.error(err);
-        showFeedback(`Failed to load video: ${err.message}`, 'error');
-        isVideoMode = false; uploadedFile = null;
-        videoEl.src = ''; overlay.classList.remove('hidden');
+        showFeedback(
+            `Playback complete! Accuracy: ${sessionAccuracyEl.textContent}. ` +
+            `Click "Analyze Video" to replay, or upload a new video.`,
+            'info'
+        );
     }
 
-    videoUploadInput.value = '';
-});
-
-// ============================================================
-// REMOVE VIDEO
-// ============================================================
-removeVideoBtn.addEventListener('click', async () => {
-    if (sessionActive && isVideoMode) await stopVideoPlayback();
-    if (videoEl.src) { URL.revokeObjectURL(videoEl.src); videoEl.src = ''; }
-    isVideoMode = false; uploadedFile = null;
-    ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
-    overlay.classList.remove('hidden');
-    uploadBtn.classList.remove('hidden');
-    removeVideoBtn.classList.add('hidden');
-    removeVideoBtn.classList.remove('flex');
-    setBtn('start');
-    resetCounters();
-    showFeedback('Video removed. Click "Start Session" for live detection.', 'info');
-});
-
-// ============================================================
-// SPEECH
-// ============================================================
-toggleBtn.addEventListener('click', function () {
-    speechSynthesis.cancel();
-    if (!sessionActive) {
-        let text;
-        if (isVideoMode && uploadedFile) {
-            // About to analyze a video
-            text = 'Analyzing your video. Please wait while we process your yoga poses.';
-        } else {
-            // About to start live session
-            text = 'Please perform the selected pose carefully. Wear fitting clothes, not baggy ones. ' +
-                   'Consider your health condition and any injuries. If you feel any pain, stop immediately. ' +
-                   'Ensure good lighting and keep your full body visible to the camera.';
+    // 
+    // SWITCH CAMERA
+    // 
+    switchCameraBtn.addEventListener('click', async () => {
+        if (!sessionActive || isVideoMode) {
+            showFeedback('Start a live session first to switch camera.', 'info'); return;
         }
-        const msg = new SpeechSynthesisUtterance(text);
-        msg.lang = 'en-US';
-        speechSynthesis.speak(msg);
-    }
-}, true);  // capture phase — fires before the async handler
+        const prev = currentCameraFacing;
+        currentCameraFacing = prev === 'user' ? 'environment' : 'user';
+        liveLoopGen++;
+        clearInterval(detectionInterval); detectionInterval = null;
+        stopWebcam();
+        const ok = await startWebcam();
+        if (!ok) {
+            currentCameraFacing = prev;
+            await startWebcam();
+            showFeedback('Could not switch camera.', 'error');
+        } else {
+            livePoseLoop();
+            detectionInterval = setInterval(sendFrameToBackend, DETECTION_INTERVAL);
+            showFeedback('Camera switched.', 'info');
+        }
+    });
 
-document.addEventListener('click', e => {
-    if (e.target !== toggleBtn) speechSynthesis.cancel();
-});
+    // 
+    // VIDEO UPLOAD
+    // 
+    videoUploadInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
 
-// ============================================================
-// INIT
-// ============================================================
-document.addEventListener('DOMContentLoaded', () => {
-    showFeedback('Click "Start Session" to begin your yoga practice.', 'info');
-    console.log('Page ready. targetPose:', targetPose);
-});
+        if (!file.type.startsWith('video/')) {
+            showFeedback('Please upload a valid video file.', 'error'); return;
+        }
+        if (file.size > 100 * 1024 * 1024) {
+            showFeedback('File too large (max 100 MB).', 'error'); return;
+        }
+
+        showFeedback('Loading video…', 'info');
+
+        try {
+            if (sessionActive && !isVideoMode) await stopLiveSession();
+            if (sessionActive && isVideoMode) await stopVideoPlayback();
+            if (videoEl.srcObject) stopWebcam();
+
+            // Revoke old blob URL
+            if (videoEl.src && videoEl.src.startsWith('blob:')) {
+                URL.revokeObjectURL(videoEl.src);
+            }
+            videoEl.srcObject = null;
+            videoEl.style.transform = 'none';
+            videoEl.loop = false;
+
+            const objectUrl = URL.createObjectURL(file);
+            videoEl.src = objectUrl;
+            videoEl.load();
+
+            await new Promise((resolve, reject) => {
+                videoEl.onloadedmetadata = () => {
+                    const w = videoEl.videoWidth || 640;
+                    const h = videoEl.videoHeight || 480;
+                    canvasEl.width = w; canvasEl.height = h;
+                    captureCanvas.width = w; captureCanvas.height = h;
+                    resolve();
+                };
+                videoEl.onerror = () => reject(new Error('Failed to load video file.'));
+            });
+
+            uploadedFile = file;
+            isVideoMode = true;
+
+            initPose();  // Pre-warm MediaPipe in background
+
+            overlay.classList.add('hidden');
+            videoEl.pause();
+            videoEl.currentTime = 0;
+
+            // Draw first-frame preview
+            videoEl.addEventListener('seeked', () => {
+                if (videoEl.readyState >= 2 && videoEl.videoWidth > 0) {
+                    canvasEl.width = videoEl.videoWidth;
+                    canvasEl.height = videoEl.videoHeight;
+                    ctx.drawImage(videoEl, 0, 0, canvasEl.width, canvasEl.height);
+                }
+            }, { once: true });
+
+            uploadBtn.style.display = 'none';
+            removeVideoBtn.style.display = 'inline-flex';
+            setBtn('analyze');
+            showFeedback(`"${file.name}" loaded. Click "Analyze Video" to start.`, 'success');
+
+        } catch (err) {
+            console.error(err);
+            showFeedback(`Unexpected error loading video: ${err.message}`, 'error');
+            isVideoMode = false; uploadedFile = null;
+            overlay.classList.remove('hidden');
+        }
+
+        videoUploadInput.value = '';
+    });
+
+    // 
+    // REMOVE VIDEO
+    // 
+    removeVideoBtn.addEventListener('click', async () => {
+        if (sessionActive && isVideoMode) await stopVideoPlayback();
+
+        if (videoEl.src && videoEl.src.startsWith('blob:')) {
+            URL.revokeObjectURL(videoEl.src);
+        }
+        videoEl.src = '';
+        videoEl.srcObject = null;
+        videoEl.loop = false;
+
+        isVideoMode = false;
+        uploadedFile = null;
+
+        showVideoControls(false);
+        ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+        overlay.classList.remove('hidden');
+
+        uploadBtn.style.display = '';
+        removeVideoBtn.style.display = 'none';
+        setBtn('start');
+        resetCounters();
+        showFeedback('Video removed. Click "Start Session" for live detection.', 'info');
+    });
+
+    // 
+    // CLEANUP ON PAGE LEAVE
+    // 
+    window.addEventListener('beforeunload', () => {
+        clearInterval(detectionInterval);
+        clearInterval(timerInterval);
+        stopAudioFeedback();
+        stopWebcam();
+        if (sessionId) {
+            fetch(`${API_BASE_URL}/session/end/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                body: JSON.stringify({ session_id: sessionId }),
+                keepalive: true,
+            }).catch(() => { });
+        }
+    });
+
+    // 
+    // INIT
+    // 
+    document.addEventListener('DOMContentLoaded', () => {
+        showFeedback('Click "Start Session" to begin your yoga practice.', 'info');
+        console.log('Page ready. targetPose:', targetPose);
+    });
 </script>
 {% endblock %}

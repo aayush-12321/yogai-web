@@ -1,0 +1,47 @@
+pose_name: plank_pose
+
+classes:
+  - correct
+  - high_back
+  - low_back
+
+dataset:
+  raw_dir: data/raw/plank_pose
+  processed_dir: data/processed/plank_pose
+
+feedback:
+  correct: "Excellent form! Your body is in a perfect straight line. Keep your core tight."
+  high_back: "Lower your hips slightly. Your hips are raised too high, breaking the straight plank line."
+  low_back: "Engage your core and lift your hips up. Do not let your lower back sag toward the floor."
+
+# Configuration for your feature extraction pipeline
+features_config:
+  # PHASE 1: MediaPipe Landmark Identifiers (Used for raw coordinate training)
+  mediapipe_landmarks:
+    - nose
+    - left_shoulder
+    - left_hip
+    - left_knee
+    - left_ankle
+
+  # PHASE 2: Engineered Geometric Features (Highly distinctive for the target classes)
+  engineered_features:
+    joint_angles:
+      - name: neck_tilt_angle
+        joints: [nose, left_shoulder, left_hip]      # Uses valid nose coordinates
+        
+      - name: torso_hip_angle
+        joints: [left_shoulder, left_hip, left_knee]  # Primary core alignment check
+        
+      - name: hip_knee_angle
+        joints: [left_hip, left_knee, left_ankle]    # Primary lower-body sag check
+
+    spatial_distances:
+      - name: hip_shoulder_vertical_ratio
+        joints: [left_shoulder, left_hip]             # Vertical Y displacement (Tracks low_back sag depth)
+        normalization_factor: [left_shoulder, left_hip] # Scale-invariant normalization factor (Torso Length)
+
+    alignment_offsets:
+      - name: plumb_line_alignment
+        joints: [left_shoulder, left_hip, left_knee, left_ankle] # Tracking sagittal drop against straight vector
+        normalization_factor: [left_shoulder, left_hip]          # Normalized by Torso Length to keep scale-invariant
