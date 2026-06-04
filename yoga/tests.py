@@ -49,3 +49,57 @@ class Warrior2OrientationTest(TestCase):
         # Since right knee is bent (~90) and left knee is straight (~180),
         # right_knee_angle should be smaller than left_knee_angle, returning False.
         self.assertFalse(detect_is_left_facing(landmarks))
+
+
+from unittest.mock import MagicMock, patch
+import numpy as np
+from django.conf import settings
+from yoga_backend.plank_pose_service import PlankPoseService
+
+class PlankPosePredictionTest(TestCase):
+    def setUp(self):
+        # Paths to real models
+        trained_models = settings.BASE_DIR / "yoga_backend" / "trained_models"
+        self.artefacts_root = trained_models / "plank_pose_files"
+        self.yaml_path = self.artefacts_root / "plank_pose.yaml"
+
+    @patch('yoga_backend.plank_pose_service.extract_features')
+    def test_plank_pose_mapping(self, mock_extract_features):
+        mock_extract_features.return_value = np.array([0.0, 0.0, 0.0, 0.0, 0.0])
+        
+        # Load the service
+        service = PlankPoseService(
+            artefacts_root=self.artefacts_root,
+            yaml_path=self.yaml_path
+        )
+        
+        # Mock pipeline and label_encoder behavior
+        service.pipeline = MagicMock()
+        service.label_encoder = MagicMock()
+        service.has_proba = True
+        
+        # Mock class mapping check for 'C' -> 'correct'
+        service.pipeline.predict.return_value = [0]
+        service.label_encoder.inverse_transform.return_value = ['C']
+        service.pipeline.predict_proba.return_value = [np.array([0.9, 0.05, 0.05])]
+        
+        landmarks = [MockLandmark(0.0, 0.0) for _ in range(33)]
+        res = service.predict_from_landmarks(landmarks)
+        self.assertEqual(res["prediction"], "correct")
+        self.assertTrue(res["is_correct"])
+        self.assertIn("Excellent form", res["feedback"])
+
+        # Mock class mapping check for 'L' -> 'low_back'
+        service.label_encoder.inverse_transform.return_value = ['L']
+        res = service.predict_from_landmarks(landmarks)
+        self.assertEqual(res["prediction"], "low_back")
+        self.assertFalse(res["is_correct"])
+        self.assertIn("sag toward the floor", res["feedback"])
+
+        # Mock class mapping check for 'H' -> 'high_back'
+        service.label_encoder.inverse_transform.return_value = ['H']
+        res = service.predict_from_landmarks(landmarks)
+        self.assertEqual(res["prediction"], "high_back")
+        self.assertFalse(res["is_correct"])
+        self.assertIn("hips are raised too high", res["feedback"])
+

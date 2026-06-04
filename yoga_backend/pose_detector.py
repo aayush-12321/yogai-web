@@ -241,6 +241,7 @@ class YogaPoseDetector:
         from django.conf import settings
         from yoga_backend.mountain_pose_service import MountainPoseService
         from yoga_backend.warrior2_pose_service import Warrior2PoseService
+        from yoga_backend.plank_pose_service import PlankPoseService
 
         base_dir       = Path(settings.BASE_DIR)
         trained_models = base_dir / "yoga_backend" / "trained_models"
@@ -274,6 +275,21 @@ class YogaPoseDetector:
             logger.info("Warrior2PoseService ready.")
         else:
             logger.warning("Warrior2PoseService failed to load artefacts.")
+
+        artefacts_root_plank = trained_models / "plank_pose_files"
+        yaml_path_plank      = artefacts_root_plank / "plank_pose.yaml"
+
+        svc_plank = PlankPoseService(
+            artefacts_root=artefacts_root_plank,
+            yaml_path=yaml_path_plank,
+            task_model_path=self._task_model_path,
+        )
+        self._pose_services["plank"] = svc_plank
+
+        if svc_plank.is_loaded:
+            logger.info("PlankPoseService ready.")
+        else:
+            logger.warning("PlankPoseService failed to load artefacts.")
 
     #  MediaPipe detection 
 
@@ -364,6 +380,15 @@ class YogaPoseDetector:
             svc = self._pose_services.get("warrior2")
             if svc is None or not svc.is_loaded:
                 return _unknown_result("warrior2", "Warrior 2 pose model not loaded.")
+            return svc.predict_from_landmarks(landmarks)
+
+        if target_pose == "plank":
+            ok, msg = self._is_plausible(landmarks, target_pose)
+            if not ok:
+                return _unknown_result(target_pose, msg)
+            svc = self._pose_services.get("plank")
+            if svc is None or not svc.is_loaded:
+                return _unknown_result("plank", "Plank pose model not loaded.")
             return svc.predict_from_landmarks(landmarks)
 
         ok, msg = self._is_plausible(landmarks, target_pose)

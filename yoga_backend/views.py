@@ -499,7 +499,6 @@ class ModelStatusView(APIView):
     def get(self, request):
         detector = get_detector()
         return Response({
-            "ml_models":     {pose: detector.models.get(pose) is not None for pose in ["plank"]},
             "pose_services": {pose: svc.is_loaded for pose, svc in detector._pose_services.items()},
             "pose_classes":  detector.pose_classes,
         })
