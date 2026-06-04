@@ -1,0 +1,96 @@
+pose_name: warrior_pose
+
+classes:
+  - correct
+  - back_leg_bent
+  # - dropping_arms
+  - drooping_arms
+  - knee_caved
+  - leaning_torso
+  - shallow_stance
+
+dataset:
+  raw_dir: data/raw/warrior2_pose
+  processed_dir: data/processed/warrior2_pose
+
+feedback:
+  correct: "Excellent Warrior posture. Gaze over your front hand and breathe deeply."
+  back_leg_bent: "Engage your quadriceps and fully straighten your back leg."
+  dropping_arms: "Raise your arms up until they are completely parallel to the floor, actively reaching through your fingertips."
+  drooping_arms: "Raise your arms up until they are completely parallel to the floor, actively reaching through your fingertips."
+  knee_caved: "Press your front knee outward toward your pinky toe; don't let it collapse inward."
+  leaning_torso: "Center your weight. Stack your torso vertically straight up from your hips instead of leaning forward."
+  shallow_stance: "Widen your feet further apart on your mat and sink your hips lower until your front thigh is nearly parallel to the floor."
+
+# Configuration for your feature extraction pipeline
+features_config:
+  # PHASE 1: MediaPipe Landmark Indices (Captures wide full-body stance)
+  mediapipe_landmarks:
+    - 11  # LEFT_SHOULDER
+    - 12  # RIGHT_SHOULDER
+    - 13  # LEFT_ELBOW
+    - 14  # RIGHT_ELBOW
+    - 15  # LEFT_WRIST
+    - 16  # RIGHT_WRIST
+    - 23  # LEFT_HIP
+    - 24  # RIGHT_HIP
+    - 25  # LEFT_KNEE  (Back Straight Leg based on image)
+    - 26  # RIGHT_KNEE (Front Bent Leg based on image)
+    - 27  # LEFT_ANKLE
+    - 28  # RIGHT_ANKLE
+
+  # PHASE 2: Engineered Geometric Features (Isolates multi-joint alignment mistakes)
+  engineered_features:
+    joint_angles:
+      - name: back_knee_flexion_angle
+        mode: "2d"                      # Forces pure X-Y plane calculation
+        joints: ["back_hip", "back_knee", "back_ankle"]
+
+      - name: front_knee_flexion_angle
+        mode: "2d"                      # Protects the front knee tracking too
+        joints: ["front_hip", "front_knee", "front_ankle"]
+
+      # - name: front_arm_torso_angle          # renamed from left_arm_torso_angle
+      #   joints: ["front_hip", "front_shoulder", "front_wrist"]
+
+      # - name: back_arm_torso_angle           # renamed from right_arm_torso_angle
+      #   joints: ["back_hip", "back_shoulder", "back_wrist"]
+
+      - name: spine_hip_angle
+        mode: "2d"
+        joints: [11, 23, 24]                # both hips -- symmetric, no swap needed
+                                            # Shoulder -> Hip -> Hip (Tracks lateral 'leaning_torso' deviations)
+
+    spatial_distances:
+      - name: stance_width_normalized
+        joints: [27, 28]              # Total width between ankles (Tracks 'shallow_stance' if width is too narrow)
+        normalization_factor: [11, 12] # Scaled by shoulder width to verify deep foundation stance
+
+    alignment_offsets:
+      - name: front_knee_ankle_alignment
+        compute: lateral_delta
+        joints: ["front_knee", "front_ankle"]   # semantic roles -- swap automatically
+        normalization_factor: [11, 12]
+
+      - name: center_of_mass_torso_offset
+        compute: midpoint_delta
+        joints: [11, 12, 23, 24]               # [shoulder_a, shoulder_b, hip_a, hip_b]
+        normalization_factor: [11, 12]
+      
+      - name: wrist_height_symmetry
+        compute: vertical_delta
+        joints: ["front_wrist", "back_wrist"]  # Cleanly routed to vertical_delta handler!
+        normalization_factor: [11, 12]
+
+      - name: front_wrist_shoulder_vertical_offset
+        compute: vertical_delta
+        joints: ["front_shoulder", "front_wrist"] # Tracks if the front hand drops below target line
+        normalization_factor: [11, 12]
+
+      - name: back_wrist_shoulder_vertical_offset
+        compute: vertical_delta
+        joints: ["back_shoulder", "back_wrist"]  # Tracks if the blind back hand drops below target line
+        normalization_factor: [11, 12]
+
+      # - name: arm_horizontal_alignment_delta
+      #   joints: [15, 11, 12, 16]      # Slope comparisons across Left Wrist -> Shoulder Line -> Right Wrist

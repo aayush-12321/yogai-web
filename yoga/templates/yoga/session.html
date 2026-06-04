@@ -845,10 +845,15 @@
     // 
     async function sendFrameToBackend() {
         if (!sessionActive || isVideoMode || videoEl.readyState < 2) return;
+        const vw = videoEl.videoWidth;
+        const vh = videoEl.videoHeight;
+        if (!vw || !vh) return;
         try {
-            captureCanvas.width = videoEl.videoWidth;
-            captureCanvas.height = videoEl.videoHeight;
+            captureCanvas.width = vw;
+            captureCanvas.height = vh;
+
             captureCtx.drawImage(videoEl, 0, 0);
+
             const frame = captureCanvas.toDataURL('image/jpeg', 0.7);
             const res = await fetch(`${API_BASE_URL}/detect/`, {
                 method: 'POST',
@@ -1264,6 +1269,13 @@
 
         setTimeout(() => {
             if (sessionActive && !isVideoMode) {
+                if (!videoEl.videoWidth || !videoEl.videoHeight) {
+                    setTimeout(() => {
+                        if (sessionActive && !isVideoMode)
+                            detectionInterval = setInterval(sendFrameToBackend, DETECTION_INTERVAL);
+                    }, 500);
+                    return;
+                }
                 detectionInterval = setInterval(sendFrameToBackend, DETECTION_INTERVAL);
             }
         }, 1500);

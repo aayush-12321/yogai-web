@@ -34,7 +34,7 @@ from yoga_backend.angle_utils import compute_angle_from_landmarks
 
 logger = logging.getLogger(__name__)
 
-# ── MediaPipe landmark index map ─────────────────────────────────────────────
+#  MediaPipe landmark index map ─
 LANDMARK_INDICES = {
     "NOSE":              0,
     "LEFT_EYE_INNER":   1,
@@ -138,17 +138,6 @@ class YogaPoseDetector:
                 "LEFT_HEEL",       "RIGHT_HEEL",
                 "LEFT_FOOT_INDEX", "RIGHT_FOOT_INDEX",
             ],
-            "warrior2": [
-                "NOSE",
-                "LEFT_EYE",        "RIGHT_EYE",
-                "LEFT_SHOULDER",   "RIGHT_SHOULDER",
-                "LEFT_ELBOW",      "RIGHT_ELBOW",
-                "LEFT_INDEX",      "RIGHT_INDEX",
-                "LEFT_HIP",        "RIGHT_HIP",
-                "LEFT_KNEE",       "RIGHT_KNEE",
-                "LEFT_HEEL",       "RIGHT_HEEL",
-                "LEFT_FOOT_INDEX", "RIGHT_FOOT_INDEX",
-            ],
             "mountain": [
                 "NOSE",
                 "LEFT_EAR",        "RIGHT_EAR",
@@ -174,17 +163,6 @@ class YogaPoseDetector:
 
         self.label_maps = {
             "plank": {0: "correct", 1: "high_back", 2: "low_back"},
-            "warrior2": {
-                0: "correct",
-                1: "bent_front_knee",
-                2: "arms_dropped",
-                3: "arms_bent",
-                4: "hips_rotated",
-                5: "back_foot_wrong_angle",
-                6: "leaning_forward",
-                7: "narrow_stance",
-                8: "shoulders_not_aligned",
-            },
         }
 
         self.feedback_map = {
@@ -192,17 +170,6 @@ class YogaPoseDetector:
                 "high_back": "Lower your hips.",
                 "low_back":  "Raise your hips.",
                 "correct":   "Good plank!",
-            },
-            "warrior2": {
-                "correct":               "Great Warrior 2!",
-                "bent_front_knee":       "Bend your front knee more — aim for 90°.",
-                "arms_dropped":          "Raise your arms to shoulder height.",
-                "arms_bent":             "Straighten your arms fully.",
-                "hips_rotated":          "Square your hips to the side.",
-                "back_foot_wrong_angle": "Turn your back foot to about 90°.",
-                "leaning_forward":       "Keep your torso upright — don't lean forward.",
-                "narrow_stance":         "Widen your stance for better stability.",
-                "shoulders_not_aligned": "Align your shoulders over your hips.",
             },
         }
 
@@ -227,24 +194,12 @@ class YogaPoseDetector:
                     "feedback": "Your knees appear bent. Keep your legs straight for a plank.",
                 },
             ],
-            "warrior2": [
-                {
-                    "compute": lambda lms: min(
-                        compute_angle_from_landmarks(lms, 23, 25, 27),
-                        compute_angle_from_landmarks(lms, 24, 26, 28),
-                    ),
-                    "min": None,
-                    "max": 120,
-                    "feedback": "Bend your front knee more for Warrior 2.",
-                },
-            ],
         }
 
         self.prediction_threshold = 0.8
-        self._warrior2_threshold  = 0.6
         self._pose_services: dict = {}
 
-        # ── MediaPipe model path ─────────────────────────────────────────────
+        #  MediaPipe model path ─
         from django.conf import settings
         self._task_model_path = (
             Path(settings.BASE_DIR)
@@ -266,7 +221,7 @@ class YogaPoseDetector:
         self.load_models()
         self._init_pose_services()
 
-    # ── Model loading ────────────────────────────────────────────────────────
+    #  Model loading 
 
     def load_models(self) -> None:
         from django.conf import settings
@@ -285,6 +240,7 @@ class YogaPoseDetector:
     def _init_pose_services(self) -> None:
         from django.conf import settings
         from yoga_backend.mountain_pose_service import MountainPoseService
+        from yoga_backend.warrior2_pose_service import Warrior2PoseService
 
         base_dir       = Path(settings.BASE_DIR)
         trained_models = base_dir / "yoga_backend" / "trained_models"
@@ -304,7 +260,22 @@ class YogaPoseDetector:
         else:
             logger.warning("MountainPoseService failed to load artefacts.")
 
-    # ── MediaPipe detection ──────────────────────────────────────────────────
+        artefacts_root_w2 = trained_models / "warrior2_pose_files"
+        yaml_path_w2      = artefacts_root_w2 / "warrior2_pose.yaml"
+
+        svc_w2 = Warrior2PoseService(
+            artefacts_root=artefacts_root_w2,
+            yaml_path=yaml_path_w2,
+            task_model_path=self._task_model_path,
+        )
+        self._pose_services["warrior2"] = svc_w2
+
+        if svc_w2.is_loaded:
+            logger.info("Warrior2PoseService ready.")
+        else:
+            logger.warning("Warrior2PoseService failed to load artefacts.")
+
+    #  MediaPipe detection 
 
     def _detect_landmarks_image(self, bgr_frame: np.ndarray):
         """
@@ -335,7 +306,7 @@ class YogaPoseDetector:
             return None
         return result.pose_landmarks[0]
 
-    # ── Keypoint extraction ──────────────────────────────────────────────────
+    #  Keypoint extraction 
 
     def _extract_keypoints(self, landmarks, pose_type: str) -> np.ndarray:
         points = []
@@ -345,7 +316,7 @@ class YogaPoseDetector:
             points.extend([lm.x, lm.y, lm.z, lm.visibility])
         return np.array(points)
 
-    # ── Visibility gate ──────────────────────────────────────────────────────
+    #  Visibility gate 
 
     def _is_body_visible(self, landmarks, pose_type: str, threshold: float = 0.5) -> tuple:
         pairs = {
@@ -358,7 +329,7 @@ class YogaPoseDetector:
                 return False, "Part of your body is not visible. Make sure your full body is in frame."
         return True, ""
 
-    # ── Plausibility gate ────────────────────────────────────────────────────
+    #  Plausibility gate 
 
     def _is_plausible(self, landmarks, pose_type: str) -> tuple:
         for check in self.pose_plausibility_checks.get(pose_type, []):
@@ -371,7 +342,7 @@ class YogaPoseDetector:
                 logger.warning(f"Plausibility check failed for {pose_type}: {exc}")
         return True, ""
 
-    # ── Prediction routing ───────────────────────────────────────────────────
+    #  Prediction routing ─
 
     def predict_from_landmarks(self, landmarks, target_pose: str) -> dict:
         """
@@ -390,7 +361,10 @@ class YogaPoseDetector:
             return svc.predict_from_landmarks(landmarks)
 
         if target_pose == "warrior2":
-            return self._predict_warrior2(landmarks, target_pose)
+            svc = self._pose_services.get("warrior2")
+            if svc is None or not svc.is_loaded:
+                return _unknown_result("warrior2", "Warrior 2 pose model not loaded.")
+            return svc.predict_from_landmarks(landmarks)
 
         ok, msg = self._is_plausible(landmarks, target_pose)
         if not ok:
@@ -423,25 +397,6 @@ class YogaPoseDetector:
             "feedback":   feedback,
         }
 
-    def _predict_warrior2(self, landmarks, target_pose: str) -> dict:
-        from yoga_backend.angle_utils import classify_warrior2
-
-        keypoints = self._extract_keypoints(landmarks, target_pose)
-        cols      = self.landmark_columns[target_pose]
-        row       = pd.DataFrame([keypoints], columns=cols).iloc[0]
-
-        label, confidence, feedback = classify_warrior2(row)
-        display = label if confidence >= self._warrior2_threshold else "unknown"
-
-        return {
-            "success":    True,
-            "pose":       target_pose,
-            "prediction": display,
-            "confidence": confidence,
-            "is_correct": label == "correct",
-            "feedback":   feedback,
-        }
-
     def _build_feature_df(self, keypoints: np.ndarray, pose_type: str) -> pd.DataFrame:
         from yoga_backend.angle_utils import compute_all_angles
 
@@ -453,7 +408,7 @@ class YogaPoseDetector:
             return pd.concat([df, pd.DataFrame([angles], columns=angle_cols)], axis=1)
         return df
 
-    # ── Public API: live webcam ──────────────────────────────────────────────
+    #  Public API: live webcam 
 
     def process_frame(self, frame_b64: str, target_pose: str) -> dict:
         """
@@ -483,7 +438,7 @@ class YogaPoseDetector:
         return self.predict_from_landmarks(landmarks, target_pose)
 
 
-# ── Helpers ──────────────────────────────────────────────────────────────────
+#  Helpers 
 
 def _unknown_result(pose: str, feedback: str) -> dict:
     return {
@@ -496,7 +451,7 @@ def _unknown_result(pose: str, feedback: str) -> dict:
     }
 
 
-# ── Singleton ────────────────────────────────────────────────────────────────
+#  Singleton 
 
 _detector: YogaPoseDetector | None = None
 

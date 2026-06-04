@@ -47,7 +47,7 @@ logger = logging.getLogger(__name__)
 MAX_VIDEO_BYTES = 100 * 1024 * 1024
 
 
-# ── Live webcam detection ────────────────────────────────────────────────────
+#  Live webcam detection 
 
 class PoseDetectionView(APIView):
     """
@@ -99,7 +99,7 @@ class PoseDetectionView(APIView):
             logger.error(f"Error recording detection for session {session_id}: {exc}")
 
 
-# ── Video file analysis ──────────────────────────────────────────────────────
+#  Video file analysis 
 
 @method_decorator(csrf_exempt, name="dispatch")
 class VideoAnalysisView(APIView):
@@ -269,7 +269,7 @@ class VideoAnalysisView(APIView):
         return results
 
 
-# ── Session management ───────────────────────────────────────────────────────
+#  Session management ─
 
 class StartSessionView(APIView):
     """
@@ -344,7 +344,7 @@ class EndSessionView(APIView):
             return Response({"error": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-# ── Session history ──────────────────────────────────────────────────────────
+#  Session history 
 
 class SessionHistoryView(APIView):
     """GET /api/yoga/sessions/?user_id=1"""
@@ -375,7 +375,7 @@ class SessionHistoryView(APIView):
             return Response({"error": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-# ── User stats ───────────────────────────────────────────────────────────────
+#  User stats ─
 
 class UserStatsView(APIView):
     """GET /api/yoga/user/stats/?user_id=1"""
@@ -483,7 +483,7 @@ class UserStatsView(APIView):
         }
 
 
-# ── Utility endpoints ────────────────────────────────────────────────────────
+#  Utility endpoints 
 
 class GetAvailablePosesView(APIView):
     """GET /api/yoga/poses/"""
@@ -503,3 +503,4 @@ class ModelStatusView(APIView):
             "pose_services": {pose: svc.is_loaded for pose, svc in detector._pose_services.items()},
             "pose_classes":  detector.pose_classes,
         })
+# Trigger reload
