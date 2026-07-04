@@ -1,0 +1,82 @@
+{
+  "pose": "master_pose",
+  "experiment_tag": "master_3class",
+  "model": "knn",
+  "feature_columns": [
+    "left_elbow_angle",
+    "right_elbow_angle",
+    "left_knee_angle",
+    "right_knee_angle",
+    "left_hip_angle",
+    "right_hip_angle",
+    "stance_width_normalized",
+    "wrist_span_normalized",
+    "torso_incline_angle",
+    "leg_incline_angle",
+    "left_arm_elevation",
+    "right_arm_elevation",
+    "left_hip_line_deviation",
+    "right_hip_line_deviation"
+  ],
+  "n_features": 14,
+  "best_params": {
+    "classifier__metric": "manhattan",
+    "classifier__n_neighbors": 15,
+    "classifier__weights": "uniform"
+  },
+  "best_cv_score": 0.9999,
+  "cv_folds_scores": [
+    0.9994,
+    1.0,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "test_f1_macro": 1.0,
+  "test_f1_weighted": 1.0,
+  "test_accuracy": 1.0,
+  "per_class_recall": {
+    "mountain": 0.0,
+    "plank": 0.0,
+    "warrior2": 0.0
+  },
+  "n_train": 36385,
+  "n_test": 2761,
+  "cv_config": {
+    "n_splits": 5,
+    "random_seed": 42,
+    "scoring": "f1_macro",
+    "n_jobs": -1
+  },
+  "class_map": {
+    "0": "mountain",
+    "1": "plank",
+    "2": "warrior2"
+  },
+  "imbalance_strategy": "class_weight=balanced (LR/SVC), sample_weight (XGBoost)",
+  "latency": {
+    "mean_ms": 9.7542,
+    "std_ms": 2.1942,
+    "p95_ms": 11.4953,
+    "p99_ms": 13.1683,
+    "implied_max_fps": 102.5
+  },
+  "confusion_matrix": [
+    [
+      928,
+      0,
+      0
+    ],
+    [
+      0,
+      709,
+      0
+    ],
+    [
+      0,
+      0,
+      1124
+    ]
+  ],
+  "classification_report": "              precision    recall  f1-score   support\n\n    mountain       1.00      1.00      1.00       928\n       plank       1.00      1.00      1.00       709\n    warrior2       1.00      1.00      1.00      1124\n\n    accuracy                           1.00      2761\n   macro avg       1.00      1.00      1.00      2761\nweighted avg       1.00      1.00      1.00      2761\n"
+}

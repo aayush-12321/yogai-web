@@ -247,18 +247,22 @@ def session_view(request, pose=None):
     pose_obj = None
     if pose:
         from yoga.models import Pose
-        # print(f"🔍 pose parameter: '{pose}'")
         all_poses = list(Pose.objects.values_list('title', flat=True))
-        # print(f"📋 All titles: {all_poses}")
         pose_obj = Pose.objects.filter(title__icontains=pose).first()
-        # print(f"✅ pose_obj: {pose_obj}")
-        # print(f"📝 description: {pose_obj.description[:50] if pose_obj else 'None'}")
     
     return render(request, "yoga/session.html", {
         'user':          request.user,
         'user_id':       request.user.id,
         'selected_pose': pose,
         'pose1':         pose_obj,
+    })
+
+@login_required
+def auto_session_view(request):
+    return render(request, "yoga/auto_session.html", {
+        'user': request.user,
+        'user_id': request.user.id,
+        'selected_pose': 'auto',
     })
 
 

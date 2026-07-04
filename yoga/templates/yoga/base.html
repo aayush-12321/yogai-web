@@ -21,6 +21,7 @@
           {% if user.is_authenticated %}
             <!-- <li><a href="{% url 'yoga:session' %}" class="hover:text-green-600">Session</a></li> -->
             <!-- <li><a href="{% url 'yoga:stats' %}" class="hover:text-green-600">Stats</a></li> -->
+            <li><a href="{% url 'yoga:auto_session' %}" class="hover:text-green-600">Auto Detect</a></li>
             <li><a href="{% url 'yoga:profile' %}" class="hover:text-green-600">Profile</a></li>
              <li>
               <a href="{% url 'yoga:logout' %}" 

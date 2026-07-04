@@ -1,0 +1,107 @@
+pose_name: master_pose_classifier
+
+# This model predicts WHICH pose the user is attempting (not pose correctness).
+# The per-pose error classifiers (mountain/plank/warrior2) run downstream of this one.
+classes:
+  - mountain
+  - plank
+  - warrior2
+
+dataset:
+  raw_dir: data/raw/master
+  processed_dir: data/processed/master_pose
+
+# Configuration for the master feature extraction pipeline
+features_config:
+  # Landmarks needed across all three source poses. This exact set is what the
+  # plank raw CSV exports under named columns, so both raw schemas are covered.
+  mediapipe_landmarks:
+    - 0   # NOSE
+    - 11  # LEFT_SHOULDER
+    - 12  # RIGHT_SHOULDER
+    - 13  # LEFT_ELBOW
+    - 14  # RIGHT_ELBOW
+    - 15  # LEFT_WRIST
+    - 16  # RIGHT_WRIST
+    - 23  # LEFT_HIP
+    - 24  # RIGHT_HIP
+    - 25  # LEFT_KNEE
+    - 26  # RIGHT_KNEE
+    - 27  # LEFT_ANKLE
+    - 28  # RIGHT_ANKLE
+    - 29  # LEFT_HEEL
+    - 30  # RIGHT_HEEL
+    - 31  # LEFT_FOOT_INDEX
+    - 32  # RIGHT_FOOT_INDEX
+
+  engineered_features:
+    joint_angles:
+      - name: left_elbow_angle
+        mode: "2d"
+        joints: [11, 13, 15]
+
+      - name: right_elbow_angle
+        mode: "2d"
+        joints: [12, 14, 16]
+
+      - name: left_knee_angle
+        mode: "2d"
+        joints: [23, 25, 27]
+
+      - name: right_knee_angle
+        mode: "2d"
+        joints: [24, 26, 28]
+
+      - name: left_hip_angle
+        mode: "2d"
+        joints: [11, 23, 25]           # shoulder -> hip -> knee
+
+      - name: right_hip_angle
+        mode: "2d"
+        joints: [12, 24, 26]
+
+    spatial_distances:
+      - name: stance_width_normalized
+        joints: [27, 28]               # ankle-to-ankle width
+        normalization_factor: [11, 12] # scaled by shoulder width
+
+      - name: wrist_span_normalized
+        joints: [15, 16]               # wrist-to-wrist width
+        normalization_factor: [11, 12]
+
+    alignment_offsets:
+      # Primary discriminator: is the body upright (mountain/warrior2) or
+      # horizontal (plank)?
+      - name: torso_incline_angle
+        compute: vector_incline_angle
+        joints: [11, 12, 23, 24]       # mid_shoulder -> mid_hip vector vs vertical
+
+      - name: leg_incline_angle
+        compute: vector_incline_angle
+        joints: [23, 24, 27, 28]       # mid_hip -> mid_ankle vector vs vertical
+
+      # Arm elevation: warrior2 holds arms parallel to the floor (small delta),
+      # mountain hangs them at the sides (large delta), plank keeps them
+      # supporting under the shoulders (small-to-moderate delta).
+      - name: left_arm_elevation
+        compute: vertical_delta
+        joints: [11, 15]                # shoulder -> wrist
+        normalization_factor: [11, 12]
+
+      - name: right_arm_elevation
+        compute: vertical_delta
+        joints: [12, 16]
+        normalization_factor: [11, 12]
+
+      # How far the hip sits off the shoulder-ankle line: near-zero for a flat
+      # plank line, larger for standing poses where the hip is not collinear
+      # with shoulder and ankle in the same way.
+      - name: left_hip_line_deviation
+        compute: perpendicular
+        joints: [11, 23, 27]            # shoulder, hip, ankle
+        normalization_factor: [11, 12]
+
+      - name: right_hip_line_deviation
+        compute: perpendicular
+        joints: [12, 24, 28]
+        normalization_factor: [11, 12]
