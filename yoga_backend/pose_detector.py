@@ -242,6 +242,7 @@ class YogaPoseDetector:
         from yoga_backend.mountain_pose_service import MountainPoseService
         from yoga_backend.warrior2_pose_service import Warrior2PoseService
         from yoga_backend.plank_pose_service import PlankPoseService
+        from yoga_backend.master_pose_service import MasterPoseClassifier, PosePredictionStabilizer
 
         base_dir       = Path(settings.BASE_DIR)
         trained_models = base_dir / "yoga_backend" / "trained_models"
@@ -290,6 +291,30 @@ class YogaPoseDetector:
             logger.info("PlankPoseService ready.")
         else:
             logger.warning("PlankPoseService failed to load artefacts.")
+
+        artefacts_root_master = trained_models / "master_pose_files"
+        yaml_path_master      = artefacts_root_master / "master_model.yaml"
+
+        svc_master = MasterPoseClassifier(
+            artefacts_root=artefacts_root_master,
+            yaml_path=yaml_path_master,
+        )
+        self._pose_services["master"] = svc_master
+        self._pose_services["stabilizer"] = PosePredictionStabilizer(window_size=5)
+
+        if svc_master.is_loaded:
+            logger.info("MasterPoseClassifier ready.")
+        else:
+            logger.warning("MasterPoseClassifier failed to load artefacts.")
+
+    def reset_auto_stabilizer(self) -> None:
+        """Reset the rolling-window stabilizer used in auto mode.
+        Call this at the start of each video analysis to prevent state bleeding
+        between requests.
+        """
+        stabilizer = self._pose_services.get("stabilizer")
+        if stabilizer is not None:
+            stabilizer.reset()
 
     #  MediaPipe detection 
 
@@ -366,6 +391,20 @@ class YogaPoseDetector:
         Public so VideoAnalysisView can call it directly after detecting
         landmarks with its own per-video landmarker.
         """
+        if target_pose == "auto":
+            master_svc = self._pose_services.get("master")
+            stabilizer = self._pose_services.get("stabilizer")
+            if not master_svc or not master_svc.is_loaded:
+                return _unknown_result("auto", "Master pose model not loaded.")
+            
+            raw_prediction = master_svc.predict_from_landmarks(landmarks)
+            target_pose = stabilizer.push(raw_prediction)
+            logger.info(f"[AutoPose] master_raw={raw_prediction!r}  stabilizer_resolved={target_pose!r}")
+            
+            if target_pose == "unknown":
+                return _unknown_result("auto", "Waiting for a clear pose...")
+
+
         ok, msg = self._is_body_visible(landmarks, target_pose)
         if not ok:
             return _unknown_result(target_pose, msg)

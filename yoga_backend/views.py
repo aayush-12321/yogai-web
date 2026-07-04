@@ -71,7 +71,11 @@ class PoseDetectionView(APIView):
         if not result.get("success"):
             return Response(result, status=status.HTTP_200_OK)
 
-        result["matches_target"] = result.get("pose", "").lower() == target_pose.lower()
+        result_pose = result.get("pose", "").lower()
+        if target_pose.lower() == "auto":
+            result["matches_target"] = result_pose in ["mountain", "plank", "warrior2"]
+        else:
+            result["matches_target"] = result_pose == target_pose.lower()
 
         if session_id:
             self._record_detection(session_id, result)
@@ -150,6 +154,11 @@ class VideoAnalysisView(APIView):
         return Response(result, status=200)
 
     def _analyze(self, video_file, target_pose: str, detector) -> dict:
+        # Auto mode: always start with a fresh stabilizer so the previous
+        # live-session or video state doesn't bleed into this video's predictions.
+        if target_pose == "auto":
+            detector.reset_auto_stabilizer()
+
         results = {
             "target_pose":        target_pose,
             "total_frames":       0,
@@ -232,6 +241,7 @@ class VideoAnalysisView(APIView):
                         results["predictions"].append({
                             "frame":         frame_index,
                             "timestamp_sec": round(frame_index / fps, 3),
+                            "pose":          prediction.get("pose", ""),
                             "prediction":    prediction.get("prediction", "unknown"),
                             "confidence":    round(conf, 4),
                             "is_correct":    prediction["is_correct"],

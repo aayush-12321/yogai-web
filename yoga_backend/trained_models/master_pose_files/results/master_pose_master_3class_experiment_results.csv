@@ -1,0 +1,5 @@
+model,best_cv_score,test_f1_macro,test_f1_weighted,test_precision_weighted,test_recall_weighted,test_accuracy,recall_mountain,recall_plank,recall_warrior2,mean_ms,p95_ms,p99_ms,implied_max_fps
+logistic_regression,1.0,1.0,1.0,1.0,1.0,1.0,0.0,0.0,0.0,0.2007,0.3579,0.6087,4981.6
+svc,0.9999,1.0,1.0,1.0,1.0,1.0,0.0,0.0,0.0,0.2451,0.3715,0.6451,4080.3
+knn,0.9999,1.0,1.0,1.0,1.0,1.0,0.0,0.0,0.0,9.7542,11.4953,13.1683,102.5
+xgboost,0.9995,1.0,1.0,1.0,1.0,1.0,0.0,0.0,0.0,1.3608,1.8014,2.1153,734.9
