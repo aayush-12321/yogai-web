@@ -53,7 +53,7 @@ FEATURE_COLUMNS = [
 PROBABILITY_THRESHOLD = 0.0
 
 
-# ─── 2-D helpers (exact per-sample equivalents of delete.py batch helpers) ───
+#  2-D helpers (exact per-sample equivalents of delete.py batch helpers) 
 
 def _xy(landmarks, idx: int) -> np.ndarray:
     """Return 2-D (x, y) for one MediaPipe landmark."""
@@ -91,7 +91,7 @@ def _point_to_line_2d(p: np.ndarray, a: np.ndarray, b: np.ndarray) -> float:
     return float(cross / (np.linalg.norm(ab) + EPSILON))
 
 
-# ─── Per-feature-type computation ────────────────────────────────────────────
+#  Per-feature-type computation 
 
 def _joint_angle(landmarks, cfg: dict) -> float:
     """Port of delete.py _compute_joint_angles for a single sample."""
@@ -167,7 +167,7 @@ def _alignment_offset(landmarks, cfg: dict) -> float:
     return float(val)
 
 
-# ─── Top-level extraction ─────────────────────────────────────────────────────
+#  Top-level extraction 
 
 def extract_features(landmarks, feat_config: dict) -> Optional[np.ndarray]:
     """
@@ -200,7 +200,7 @@ def extract_features(landmarks, feat_config: dict) -> Optional[np.ndarray]:
     return None if not np.all(np.isfinite(row)) else row
 
 
-# ─── Stabilizer ──────────────────────────────────────────────────────────────
+#  Stabilizer 
 
 class PosePredictionStabilizer:
     """
@@ -239,7 +239,7 @@ class PosePredictionStabilizer:
         self.last_stable = None
 
 
-# ─── Classifier ──────────────────────────────────────────────────────────────
+#  Classifier 
 
 class MasterPoseClassifier:
     """
@@ -261,7 +261,7 @@ class MasterPoseClassifier:
 
         self._load(artefacts_root, yaml_path, force_model)
 
-    # ── Loading ────────────────────────────────────────────────────────────────
+    #  Loading ─
 
     def _load(self, artefacts_root: Path, yaml_path: Path, force_model: Optional[str]) -> None:
         if not yaml_path.exists():
@@ -317,7 +317,7 @@ class MasterPoseClassifier:
             f"classes: {list(self.label_encoder.classes_)}"
         )
 
-    # ── Inference ──────────────────────────────────────────────────────────────
+    #  Inference 
 
     def predict_from_landmarks(self, landmarks) -> str:
         """

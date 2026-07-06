@@ -27,6 +27,7 @@ def poses_view(request):
         'warrior2': 'warrior2',
         'warrior ii': 'warrior2',
         'warrior': 'warrior2',
+        'chair': 'chair',
     }
     
     for pose in poses:
@@ -42,7 +43,7 @@ def poses_view(request):
             pose.pose_slug = pose_title_lower.replace(' pose', '').replace(' ', '')
         
         # Ensure we have a valid slug
-        if pose.pose_slug not in ['plank', 'mountain', 'warrior2']:
+        if pose.pose_slug not in ['plank', 'mountain', 'warrior2', 'chair']:
             pose.pose_slug = 'plank'  # default fallback
     
     return render(request, 'yoga/poses.html', {'poses': poses})

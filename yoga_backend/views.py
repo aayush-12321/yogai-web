@@ -5,8 +5,8 @@ API endpoints for yoga pose detection, session management, and user stats.
 
 Endpoints
 ---------
-POST   /api/yoga/detect/             PoseDetectionView   — live webcam frame
-POST   /api/yoga/analyze_video/      VideoAnalysisView   — uploaded video file
+POST   /api/yoga/detect/             PoseDetectionView   - live webcam frame
+POST   /api/yoga/analyze_video/      VideoAnalysisView   - uploaded video file
 POST   /api/yoga/session/start/      StartSessionView
 POST   /api/yoga/session/end/        EndSessionView
 GET    /api/yoga/sessions/           SessionHistoryView
@@ -73,7 +73,7 @@ class PoseDetectionView(APIView):
 
         result_pose = result.get("pose", "").lower()
         if target_pose.lower() == "auto":
-            result["matches_target"] = result_pose in ["mountain", "plank", "warrior2"]
+            result["matches_target"] = result_pose in ["mountain", "plank", "warrior2", "chair"]
         else:
             result["matches_target"] = result_pose == target_pose.lower()
 
@@ -98,7 +98,7 @@ class PoseDetectionView(APIView):
                 is_correct=result.get("is_correct", False),
             )
         except YogaSession.DoesNotExist:
-            logger.warning(f"Session {session_id} not found — detection not recorded.")
+            logger.warning(f"Session {session_id} not found - detection not recorded.")
         except Exception as exc:
             logger.error(f"Error recording detection for session {session_id}: {exc}")
 
@@ -112,7 +112,7 @@ class VideoAnalysisView(APIView):
     Form data: video=<file>, target_pose=<str>
 
     A FRESH VIDEO mode landmarker is created for each upload.
-    This is mandatory — VIDEO mode is stateful and timestamps must be
+    This is mandatory - VIDEO mode is stateful and timestamps must be
     monotonically increasing within one landmarker instance. Sharing a
     single instance across requests causes timestamp ordering crashes.
 
@@ -172,7 +172,7 @@ class VideoAnalysisView(APIView):
 
         # Write the entire upload to disk before opening with OpenCV.
         # The file must be fully written and closed before cv2.VideoCapture
-        # can read it — reading from a half-written file causes errors.
+        # can read it - reading from a half-written file causes errors.
         tmp_fd, temp_path = tempfile.mkstemp(suffix=".mp4")
         try:
             with os.fdopen(tmp_fd, "wb") as tmp_file:
@@ -217,11 +217,11 @@ class VideoAnalysisView(APIView):
                     # This makes MAX_ANALYZED_FRAMES a reliable upper bound.
                     sampled_frames += 1
 
-                    # Monotonic timestamp in ms — matches training script exactly:
+                    # Monotonic timestamp in ms - matches training script exactly:
                     #   timestamp_ms = int((frame_count / fps) * 1000)
                     timestamp_ms = int((frame_index / fps) * 1000)
 
-                    # No resize — training videos were processed at full resolution.
+                    # No resize - training videos were processed at full resolution.
                     landmarks = detector.detect_landmarks_video(
                         frame, timestamp_ms, video_landmarker
                     )
@@ -504,7 +504,7 @@ class GetAvailablePosesView(APIView):
 
 
 class ModelStatusView(APIView):
-    """GET /api/yoga/model_status/  — debug"""
+    """GET /api/yoga/model_status/  - debug"""
 
     def get(self, request):
         detector = get_detector()

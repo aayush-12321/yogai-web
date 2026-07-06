@@ -1,0 +1,84 @@
+pose_name: chair_pose
+
+classes:
+  - correct
+  - shallow_squat
+  - dropped_arms
+  - bent_forward
+
+dataset:
+  raw_dir: data/raw/chair_pose
+  processed_dir: data/processed/chair_pose
+
+feedback:
+  correct: "Excellent Chair pose! Keep your chest lifted, sit deep into your heels, and extend your arms fully."
+  shallow_squat: "Sink lower into your hips as if sitting back into an actual chair. Aim to bring your thighs closer to parallel with the floor."
+  dropped_arms: "Raise your arms higher over head. Your biceps should be framing your ears, creating a straight line with your torso."
+  bent_forward: "Lift through your chest and open your heart. Keep your spine long instead of collapsing your torso forward over your thighs."
+
+#
+# All recordings are side-view (sagittal plane).
+# Only the camera-facing side is reliable - all features use semantic roles
+# (camera_shoulder, camera_hip, ...) that resolve to the correct anatomical side
+# via is_left_facing. No occluded far-side landmarks are used.
+#
+# Normalization: all distance features are divided by torso length
+# (camera_shoulder → camera_hip), which is fully visible and stable in
+# side view. Angles are scale-invariant by nature and need no normalizer.
+# 
+features_config:
+  mediapipe_landmarks:
+    - 11  # LEFT_SHOULDER
+    - 12  # RIGHT_SHOULDER
+    - 15  # LEFT_WRIST
+    - 16  # RIGHT_WRIST
+    - 23  # LEFT_HIP
+    - 24  # RIGHT_HIP
+    - 25  # LEFT_KNEE
+    - 26  # RIGHT_KNEE
+    - 27  # LEFT_ANKLE
+    - 28  # RIGHT_ANKLE
+
+  engineered_features:
+
+    joint_angles:
+      # shallow_stance primary - correct ~90°, shallow >90° (open)
+      - name: camera_knee_flexion_angle
+        mode: "2d"
+        joints: ["camera_hip", "camera_knee", "camera_ankle"]
+
+      # bent_forward primary - correct ~90-100°, bent_forward closes (<80°)
+      - name: camera_torso_hip_knee_angle
+        joints: ["camera_shoulder", "camera_hip", "camera_knee"]
+
+      # dropped_arms primary - correct ~160-180°, dropped closes (<130°)
+      - name: camera_shoulder_arm_angle
+        joints: ["camera_hip", "camera_shoulder", "camera_wrist"]
+
+    spatial_distances:
+      # dropped_arms backup - wrist above shoulder = large value; dropped ≈ 0
+      - name: camera_wrist_shoulder_vertical_delta
+        compute: vertical_delta
+        joints: ["camera_shoulder", "camera_wrist"]
+        normalization_factor: ["camera_shoulder", "camera_hip"]  # torso length
+
+      # shallow_stance backup - hip above knee = small value; correct pose hip
+      # drops to knee level or below → large value
+      - name: camera_hip_knee_vertical_delta
+        compute: vertical_delta
+        joints: ["camera_hip", "camera_knee"]
+        normalization_factor: ["camera_shoulder", "camera_hip"]  # torso length
+
+    alignment_offsets:
+      # bent_forward backup - shoulder drifts ahead of ankle when collapsing forward
+      - name: camera_shoulder_ankle_horizontal_offset
+        compute: lateral_delta
+        joints: ["camera_shoulder", "camera_ankle"]
+        normalization_factor: ["camera_shoulder", "camera_hip"]  # torso length
+
+      # shallow_stance + bent_forward separator - knee overshoots ankle in both
+      # but in different magnitude; combined with knee angle separates the two
+      - name: camera_knee_ankle_horizontal_overhang
+        compute: lateral_delta
+        joints: ["camera_knee", "camera_ankle"]
+        normalization_factor: ["camera_shoulder", "camera_hip"]  # torso length

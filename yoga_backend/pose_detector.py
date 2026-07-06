@@ -14,8 +14,9 @@ Running modes:
 
 Pose routing:
   mountain  → MountainPoseService (ML pipeline, YAML feature engineering)
-  warrior2  → rule-based classify_warrior2() from angle_utils.py
-  plank     → ML pipeline via _predict_ml()
+  warrior2  → Warrior2PoseService  (ML pipeline, YAML feature engineering)
+  plank     → PlankPoseService     (ML pipeline, YAML feature engineering)
+  chair     → ChairPoseService     (ML pipeline, YAML feature engineering)
 """
 
 import logging
@@ -122,7 +123,7 @@ class YogaPoseDetector:
 
     def __init__(self):
         self.models       = {}
-        self.pose_classes = ["plank", "mountain", "warrior2"]
+        self.pose_classes = ["plank", "mountain", "warrior2", "chair"]
 
         self._lm_index = LANDMARK_INDICES
 
@@ -242,6 +243,7 @@ class YogaPoseDetector:
         from yoga_backend.mountain_pose_service import MountainPoseService
         from yoga_backend.warrior2_pose_service import Warrior2PoseService
         from yoga_backend.plank_pose_service import PlankPoseService
+        from yoga_backend.chair_pose_service import ChairPoseService
         from yoga_backend.master_pose_service import MasterPoseClassifier, PosePredictionStabilizer
 
         base_dir       = Path(settings.BASE_DIR)
@@ -291,6 +293,21 @@ class YogaPoseDetector:
             logger.info("PlankPoseService ready.")
         else:
             logger.warning("PlankPoseService failed to load artefacts.")
+
+        artefacts_root_chair = trained_models / "chair_pose_files"
+        yaml_path_chair      = artefacts_root_chair / "chair_pose.yaml"
+
+        svc_chair = ChairPoseService(
+            artefacts_root=artefacts_root_chair,
+            yaml_path=yaml_path_chair,
+            task_model_path=self._task_model_path,
+        )
+        self._pose_services["chair"] = svc_chair
+
+        if svc_chair.is_loaded:
+            logger.info("ChairPoseService ready.")
+        else:
+            logger.warning("ChairPoseService failed to load artefacts.")
 
         artefacts_root_master = trained_models / "master_pose_files"
         yaml_path_master      = artefacts_root_master / "master_model.yaml"
@@ -365,10 +382,32 @@ class YogaPoseDetector:
             "mountain": [(11, 12), (23, 24), (25, 26), (29, 30)],
             "warrior2": [(11, 12), (23, 24), (25, 26), (27, 28)],
         }
+        if pose_type == "chair":
+            return self._is_chair_body_visible(landmarks, threshold)
         for pair in pairs.get(pose_type, []):
             if not any(landmarks[i].visibility >= threshold for i in pair):
                 return False, "Part of your body is not visible. Make sure your full body is in frame."
         return True, ""
+
+    def _is_chair_body_visible(self, landmarks, threshold: float = 0.5) -> tuple:
+        """
+        Chair Pose is captured side-on, so only one side of the body faces the
+        camera.  We pass visibility if ALL four key landmarks on EITHER the left
+        side OR the right side meet the threshold — no orientation detection needed.
+
+        Left side  : shoulder=11, hip=23, knee=25, ankle=27
+        Right side : shoulder=12, hip=24, knee=26, ankle=28
+        """
+        left_side  = [11, 23, 25, 27]   # shoulder, hip, knee, ankle
+        right_side = [12, 24, 26, 28]
+
+        left_ok  = all(landmarks[i].visibility >= threshold for i in left_side)
+        right_ok = all(landmarks[i].visibility >= threshold for i in right_side)
+
+        if left_ok or right_ok:
+            return True, ""
+
+        return False, "Make sure your full side profile is visible — shoulder, hip, knee, and ankle should all be in frame."
 
     #  Plausibility gate 
 
@@ -428,6 +467,12 @@ class YogaPoseDetector:
             svc = self._pose_services.get("plank")
             if svc is None or not svc.is_loaded:
                 return _unknown_result("plank", "Plank pose model not loaded.")
+            return svc.predict_from_landmarks(landmarks)
+
+        if target_pose == "chair":
+            svc = self._pose_services.get("chair")
+            if svc is None or not svc.is_loaded:
+                return _unknown_result("chair", "Chair pose model not loaded.")
             return svc.predict_from_landmarks(landmarks)
 
         ok, msg = self._is_plausible(landmarks, target_pose)

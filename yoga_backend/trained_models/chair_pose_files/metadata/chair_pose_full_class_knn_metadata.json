@@ -1,0 +1,77 @@
+{
+  "pose": "chair_pose",
+  "experiment_tag": "full_class",
+  "model": "knn",
+  "feature_columns": [
+    "camera_knee_flexion_angle",
+    "camera_torso_hip_knee_angle",
+    "camera_shoulder_arm_angle",
+    "camera_wrist_shoulder_vertical_delta",
+    "camera_hip_knee_vertical_delta",
+    "camera_shoulder_ankle_horizontal_offset",
+    "camera_knee_ankle_horizontal_overhang"
+  ],
+  "n_features": 7,
+  "best_params": {
+    "classifier__metric": "euclidean",
+    "classifier__n_neighbors": 11,
+    "classifier__weights": "distance"
+  },
+  "best_cv_score": 0.8983,
+  "cv_folds_scores": [
+    0.8869,
+    0.7876,
+    0.9449,
+    0.9737
+  ],
+  "test_f1_weighted": 0.7704,
+  "test_accuracy": 0.7718,
+  "n_train": 2232,
+  "n_test": 701,
+  "cv_config": {
+    "n_splits": 5,
+    "random_seed": 42,
+    "scoring": "f1_weighted",
+    "n_jobs": -1
+  },
+  "class_map": {
+    "0": "bent_forward",
+    "1": "correct",
+    "2": "dropped_arms",
+    "3": "shallow_squat"
+  },
+  "latency": {
+    "mean_ms": 0.7811,
+    "std_ms": 0.0861,
+    "p95_ms": 0.9395,
+    "p99_ms": 1.1082,
+    "implied_max_fps": 1280.3
+  },
+  "confusion_matrix": [
+    [
+      146,
+      0,
+      4,
+      0
+    ],
+    [
+      1,
+      155,
+      0,
+      95
+    ],
+    [
+      39,
+      8,
+      98,
+      5
+    ],
+    [
+      0,
+      8,
+      0,
+      142
+    ]
+  ],
+  "classification_report": "               precision    recall  f1-score   support\n\n bent_forward       0.78      0.97      0.87       150\n      correct       0.91      0.62      0.73       251\n dropped_arms       0.96      0.65      0.78       150\nshallow_squat       0.59      0.95      0.72       150\n\n     accuracy                           0.77       701\n    macro avg       0.81      0.80      0.78       701\n weighted avg       0.82      0.77      0.77       701\n"
+}
