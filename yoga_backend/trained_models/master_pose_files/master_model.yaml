@@ -6,6 +6,7 @@ classes:
   - mountain
   - plank
   - warrior2
+  - chair
 
 dataset:
   raw_dir: data/raw/master
