@@ -341,6 +341,10 @@
     let pose = null;
     let poseReady = false;
 
+    // Current skeleton colour state (green when correct, red when incorrect, yellow when unclear)
+    let currentIsCorrect = false;
+    let skeletonColor = '#00FF00';
+
     // Generation counters (prevent stale loop callbacks)
     let liveLoopGen = 0;
     let videoLoopGen = 0;
@@ -721,8 +725,9 @@
         }
         ctx.drawImage(results.image, 0, 0, canvasEl.width, canvasEl.height);
         if (results.poseLandmarks) {
+            // Use dynamic skeleton colour based on latest backend prediction
             drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS,
-                { color: '#00FF00', lineWidth: 4 });
+                { color: skeletonColor, lineWidth: 4 });
             drawLandmarks(ctx, results.poseLandmarks,
                 { color: '#FF0000', lineWidth: 2, radius: 4 });
         }
@@ -908,6 +913,14 @@
             type = 'error';
         }
         showFeedback(msg, type);
+
+        // Update skeleton colour state used by onPoseResults drawing.
+        currentIsCorrect = !!(isCorrect && !isUnknown);
+        if (isUnknown) {
+            skeletonColor = '#FFFF00'; 
+        } else {
+            skeletonColor = currentIsCorrect ? '#00FF00' : '#FF0000';
+        }
     }
 
     function handleDetectionResult(result) {
