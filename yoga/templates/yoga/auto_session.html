@@ -231,7 +231,10 @@
                 </div>
 
                 <div class="bg-white rounded-lg shadow-lg p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Current Pose</h3>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                        Current Pose:
+                        <span id="targetPoseNameSidebar" class="text-sm font-bold text-green-700 ml-2">Detecting...</span>
+                    </h3>
                     <div class="text-center">
                         <div id="currentPose" class="text-2xl font-bold text-gray-900 mb-2">—</div>
                         <div class="text-sm text-gray-500 mb-4">
@@ -343,6 +346,10 @@
     let pose = null;
     let poseReady = false;
 
+    // Current skeleton colour state (green when correct, red when incorrect, yellow when unclear)
+    let currentIsCorrect = false;
+    let skeletonColor = '#00FF00';
+
     // Generation counters (prevent stale loop callbacks)
     let liveLoopGen = 0;
     let videoLoopGen = 0;
@@ -369,6 +376,12 @@
     const statusText = document.getElementById('statusText');
     const accuracyIndicator = document.getElementById('accuracyIndicator');
     const targetPoseName = document.getElementById('targetPoseName');
+    const targetPoseNameSidebar = document.getElementById('targetPoseNameSidebar');
+
+    function updateTargetPoseNames(text) {
+        if (targetPoseName) targetPoseName.textContent = text;
+        if (targetPoseNameSidebar) targetPoseNameSidebar.textContent = text;
+    }
     const switchCameraBtn = document.getElementById('switchCamera');
     const totalFramesEl = document.getElementById('totalFrames');
     const correctFramesEl = document.getElementById('correctFrames');
@@ -722,8 +735,9 @@
         }
         ctx.drawImage(results.image, 0, 0, canvasEl.width, canvasEl.height);
         if (results.poseLandmarks) {
+            // Use dynamic skeleton colour based on latest backend prediction
             drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS,
-                { color: '#00FF00', lineWidth: 4 });
+                { color: skeletonColor, lineWidth: 4 });
             drawLandmarks(ctx, results.poseLandmarks,
                 { color: '#FF0000', lineWidth: 2, radius: 4 });
         }
@@ -907,6 +921,14 @@
             type = 'error';
         }
         showFeedback(msg, type);
+
+        // Update skeleton colour state used by onPoseResults drawing.
+        currentIsCorrect = !!(isCorrect && !isUnknown);
+        if (isUnknown) {
+            skeletonColor = '#FFFF00';
+        } else {
+            skeletonColor = currentIsCorrect ? '#00FF00' : '#FF0000';
+        }
     }
 
     function handleDetectionResult(result) {
@@ -1016,7 +1038,7 @@
             ? smoothedResult.pose : null;
         if (detectedPose && detectedPose !== lastDetectedPose) {
             lastDetectedPose = detectedPose;
-            targetPoseName.textContent = poseLabelOf(detectedPose);
+            updateTargetPoseNames(poseLabelOf(detectedPose));
             // Speak pose name when it changes (live mode only)
             if (!isVideoMode && window.speechSynthesis) {
                 speechSynthesis.cancel();
@@ -1159,7 +1181,7 @@
         liveBadge.textContent = 'VIDEO';
         liveBadge.classList.remove('hidden');
         accuracyIndicator.classList.remove('hidden');
-        targetPoseName.textContent = 'Detecting...';
+        updateTargetPoseNames('Detecting...');
         overlay.classList.add('hidden');
         toggleBtn.disabled = false;
 
@@ -1240,7 +1262,7 @@
                 const bestPose = best.pose && best.pose !== 'auto' ? best.pose : null;
                 if (bestPose && bestPose !== lastDetectedPose) {
                     lastDetectedPose = bestPose;
-                    targetPoseName.textContent = poseLabelOf(bestPose);
+                    updateTargetPoseNames(poseLabelOf(bestPose));
                 }
                 applyPoseUI({
                     prediction: best.prediction,
@@ -1280,7 +1302,7 @@
         liveBadge.textContent = 'LIVE';
         liveBadge.classList.remove('hidden');
         accuracyIndicator.classList.remove('hidden');
-        targetPoseName.textContent = 'Detecting...';
+        updateTargetPoseNames('Detecting...');
 
         resetCounters();
         showFeedback('Session started! Step into any yoga pose — it will be detected automatically.', 'info');
@@ -1324,7 +1346,7 @@
         setBtn('start');
         targetPose = 'auto';
         lastDetectedPose = null;
-        targetPoseName.textContent = 'Detecting...';
+        updateTargetPoseNames('Detecting...');
         showFeedback('Session ended. Click "Start Session" to begin again.', 'info');
     }
 
