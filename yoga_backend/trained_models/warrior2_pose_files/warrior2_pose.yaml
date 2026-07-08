@@ -14,13 +14,13 @@ dataset:
   processed_dir: data/processed/warrior2_pose
 
 feedback:
-  correct: "Excellent Warrior posture. Gaze over your front hand and breathe deeply."
-  back_leg_bent: "Engage your quadriceps and fully straighten your back leg."
-  dropping_arms: "Raise your arms up until they are completely parallel to the floor, actively reaching through your fingertips."
-  drooping_arms: "Raise your arms up until they are completely parallel to the floor, actively reaching through your fingertips."
-  knee_caved: "Press your front knee outward toward your pinky toe; don't let it collapse inward."
-  leaning_torso: "Center your weight. Stack your torso vertically straight up from your hips instead of leaning forward."
-  shallow_stance: "Widen your feet further apart on your mat and sink your hips lower until your front thigh is nearly parallel to the floor."
+  correct: "Excellent Warrior II! Keep your arms strong, chest open, and gaze over your front hand."
+  back_leg_bent: "Straighten your back leg and engage your thigh muscles."
+  dropping_arms: "Raise your arms until they are parallel to the floor."
+  drooping_arms: "Raise your arms until they are parallel to the floor."
+  knee_caved: "Keep your front knee aligned over your toes. Avoid letting it collapse inward."
+  leaning_torso: "Keep your torso upright and centered over your hips."
+  shallow_stance: "Widen your stance and bend your front knee until your thigh is nearly parallel to the floor."
 
 # Configuration for your feature extraction pipeline
 features_config:

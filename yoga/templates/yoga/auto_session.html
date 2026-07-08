@@ -913,18 +913,18 @@
 
         let msg, type;
         if (isCorrect && !isUnknown) {
-            msg = `✓ Great form! You are holding ${poseLabelOf(targetPoseLabel)} correctly. (${confPct}% confidence)`;
+            msg = `✓ Great form! You are holding ${poseLabelOf(targetPoseLabel)} correctly.`;
             type = 'success';
         } else if (isUnknown) {
             msg = confidence === 0
-                ? `⚠ Pose unclear -make sure your full body is visible and the lighting is good.`
-                : `⚠ Almost there! Confidence is ${confPct}% -adjust your position slightly.`;
+                ? `⚠ Pose unclear - make sure your full body is visible and the lighting is good.`
+                : `⚠ Almost there! Confidence is ${confPct}% - adjust your position slightly.`;
             type = 'warning';
         } else if (backendFeedback) {
             msg = `✗ ${backendFeedback}`;
             type = 'error';
         } else {
-            msg = `✗ ${poseLabelOf(prediction)} detected. (${confPct}% confidence)`;
+            msg = `✗ ${poseLabelOf(prediction)} detected.`;
             type = 'error';
         }
         showFeedback(msg, type);

@@ -2,12 +2,12 @@
 pose_detector.py
 
 Central inference hub for all three poses.
-Uses the MediaPipe Tasks API (mediapipe >= 0.10.x) — mp.solutions.pose is NOT used.
+Uses the MediaPipe Tasks API (mediapipe >= 0.10.x) - mp.solutions.pose is NOT used.
 
 Running modes:
   Live webcam  → IMAGE mode  (stateless, isolated frames, matches training images)
   Video upload → VIDEO mode  (temporal tracking, matches training video extraction)
-                 A FRESH landmarker is created per video — this is mandatory because
+                 A FRESH landmarker is created per video - this is mandatory because
                  VIDEO mode is stateful and timestamps must be monotonically increasing
                  within a single landmarker instance. Reusing across videos causes
                  "Input timestamp must be monotonically increasing" crashes.
@@ -90,7 +90,7 @@ def _ensure_task_model(model_path: Path) -> None:
 
 def build_image_landmarker(model_path: Path) -> mp_vision.PoseLandmarker:
     """
-    IMAGE mode — stateless, one detection per call, no timestamps needed.
+    IMAGE mode - stateless, one detection per call, no timestamps needed.
     Used for live webcam frames. Matches training-time image extraction.
     """
     options = mp_vision.PoseLandmarkerOptions(
@@ -105,7 +105,7 @@ def build_image_landmarker(model_path: Path) -> mp_vision.PoseLandmarker:
 
 def build_video_landmarker(model_path: Path) -> mp_vision.PoseLandmarker:
     """
-    VIDEO mode — stateful, requires monotonically increasing timestamps.
+    VIDEO mode - stateful, requires monotonically increasing timestamps.
     Must be created fresh for each video file. Matches training-time video
     extraction exactly (same options as _process_video in the training script).
     """
@@ -210,12 +210,12 @@ class YogaPoseDetector:
         )
         _ensure_task_model(self._task_model_path)
 
-        # IMAGE mode landmarker — one shared instance for live webcam.
+        # IMAGE mode landmarker - one shared instance for live webcam.
         # Stateless: safe to reuse across requests.
         self._landmarker_image = build_image_landmarker(self._task_model_path)
 
         # There is NO shared video landmarker here.
-        # VideoAnalysisView creates a fresh one per video — see views.py.
+        # VideoAnalysisView creates a fresh one per video - see views.py.
 
         logger.info("MediaPipe PoseLandmarker (IMAGE mode) initialised for live webcam.")
 
@@ -236,7 +236,7 @@ class YogaPoseDetector:
                     self.models[pose] = pickle.load(f)
                 logger.info(f"{pose} pipeline loaded.")
             else:
-                logger.warning(f"{pose} pipeline not found — demo mode active.")
+                logger.warning(f"{pose} pipeline not found - demo mode active.")
 
     def _init_pose_services(self) -> None:
         from django.conf import settings
@@ -338,7 +338,7 @@ class YogaPoseDetector:
     def _detect_landmarks_image(self, bgr_frame: np.ndarray):
         """
         IMAGE mode detection for a single webcam frame.
-        No resize — matches training (images processed at original resolution).
+        No resize - matches training (images processed at original resolution).
         Returns landmark list or None.
         """
         rgb      = cv2.cvtColor(bgr_frame, cv2.COLOR_BGR2RGB)
@@ -353,8 +353,8 @@ class YogaPoseDetector:
                                landmarker: mp_vision.PoseLandmarker):
         """
         VIDEO mode detection for a single frame from a video file.
-        Static method — called by VideoAnalysisView with its own per-video landmarker.
-        No resize — matches training (videos processed at original resolution).
+        Static method - called by VideoAnalysisView with its own per-video landmarker.
+        No resize - matches training (videos processed at original resolution).
         Returns landmark list or None.
         """
         rgb      = cv2.cvtColor(bgr_frame, cv2.COLOR_BGR2RGB)
@@ -393,7 +393,7 @@ class YogaPoseDetector:
         """
         Chair Pose is captured side-on, so only one side of the body faces the
         camera.  We pass visibility if ALL four key landmarks on EITHER the left
-        side OR the right side meet the threshold — no orientation detection needed.
+        side OR the right side meet the threshold - no orientation detection needed.
 
         Left side  : shoulder=11, hip=23, knee=25, ankle=27
         Right side : shoulder=12, hip=24, knee=26, ankle=28
@@ -407,7 +407,7 @@ class YogaPoseDetector:
         if left_ok or right_ok:
             return True, ""
 
-        return False, "Make sure your full side profile is visible — shoulder, hip, knee, and ankle should all be in frame."
+        return False, "Make sure your full side profile is visible - shoulder, hip, knee, and ankle should all be in frame."
 
     #  Plausibility gate 
 
@@ -523,7 +523,7 @@ class YogaPoseDetector:
         """
         Decode a base64 JPEG and run IMAGE mode detection + prediction.
         Used by PoseDetectionView (live webcam).
-        No resize — training images were not resized.
+        No resize - training images were not resized.
         """
         import base64
 

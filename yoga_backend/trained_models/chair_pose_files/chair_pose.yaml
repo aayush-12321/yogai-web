@@ -11,10 +11,10 @@ dataset:
   processed_dir: data/processed/chair_pose
 
 feedback:
-  correct: "Excellent Chair pose! Keep your chest lifted, sit deep into your heels, and extend your arms fully."
-  shallow_squat: "Sink lower into your hips as if sitting back into an actual chair. Aim to bring your thighs closer to parallel with the floor."
-  dropped_arms: "Raise your arms higher over head. Your biceps should be framing your ears, creating a straight line with your torso."
-  bent_forward: "Lift through your chest and open your heart. Keep your spine long instead of collapsing your torso forward over your thighs."
+  correct: "Excellent Chair Pose! Keep your chest lifted, sit back into your heels, and fully extend your arms."
+  shallow_squat: "Lower your hips as if sitting back into a chair. Try to bring your thighs closer to parallel with the floor."
+  dropped_arms: "Raise your arms overhead. Keep your biceps close to your ears and your arms fully extended."
+  bent_forward: "Lift your chest and keep your spine long. Avoid leaning your torso too far forward."
 
 #
 # All recordings are side-view (sagittal plane).
