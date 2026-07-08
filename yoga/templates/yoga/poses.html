@@ -6,7 +6,7 @@
   <div class="max-w-7xl mx-auto">
     <!-- Header -->
     <div class="mb-8">
-      <h1 class="text-3xl font-bold text-gray-900 mb-2">Pose Library</h1>
+      <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Pose Library</h1>
       <p class="text-gray-600">Choose a pose to start guided practice</p>
     </div>
 
@@ -14,9 +14,10 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {% for pose in poses %}
       <div class="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-200">
-        
+
         <!-- Pose Image/Emoji -->
-        <img src="{{ pose.image.url }}" alt="pose img" class="h-50 bg-gradient-to-br from-green-100 to-blue-100 flex items-center justify-center">
+        <img src="{{ pose.image.url }}" alt="pose img"
+          class="h-50 w-full object-cover bg-gradient-to-br from-green-100 to-blue-100 flex items-center justify-center">
         </img>
 
         <!-- Pose Info -->
@@ -35,7 +36,7 @@
 
           <!-- Start Button -->
           <a href="{% url 'yoga:session_with_pose' pose.pose_slug %}"
-             class="block text-center w-full bg-gradient-to-r from-green-500 to-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:from-green-600 hover:to-blue-700 transition-all duration-200">
+            class="block text-center w-full bg-gradient-to-r from-green-500 to-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:from-green-600 hover:to-blue-700 transition-all duration-200">
             Start Practice
           </a>
         </div>
@@ -46,11 +47,11 @@
 </div>
 
 <!-- Modal -->
-<div id="welcomeModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-  <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-8 relative">
-    <h2 class="text-2xl font-bold text-green-600 mb-4">Welcome to YogaAI!</h2>
+<div id="welcomeModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden p-4">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 sm:p-8 relative max-h-[90vh] overflow-y-auto">
+    <h2 class="text-xl sm:text-2xl font-bold text-green-600 mb-4">Welcome to YogaAI!</h2>
     <p class="text-gray-700 mb-4">Before you start, please keep in mind:</p>
-    <ul class="list-disc list-inside text-gray-700 space-y-2 mb-6">
+    <ul class="list-disc list-inside text-gray-700 space-y-2 mb-6 text-sm sm:text-base">
       <li>Wear fitting clothes, not baggy ones</li>
       <li>Do yoga in good lighting</li>
       <li>Your full body should be visible to the camera</li>
@@ -60,7 +61,8 @@
       <li>Always consult with a certified expert; this site may make mistakes</li>
       <li>Stay safe and enjoy your practice!</li>
     </ul>
-    <button id="closeModal" class="w-full bg-gradient-to-r from-green-500 to-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:from-green-600 hover:to-blue-700 transition-all duration-200">
+    <button id="closeModal"
+      class="w-full bg-gradient-to-r from-green-500 to-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:from-green-600 hover:to-blue-700 transition-all duration-200">
       Got it!
     </button>
   </div>
@@ -69,15 +71,15 @@
 <!-- Modal Script -->
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  const modal = document.getElementById('welcomeModal');
-  const closeBtn = document.getElementById('closeModal');
+  document.addEventListener('DOMContentLoaded', function () {
+    const modal = document.getElementById('welcomeModal');
+    const closeBtn = document.getElementById('closeModal');
 
-  // Show modal when page loads
-  modal.classList.remove('hidden');
+    // Show modal when page loads
+    modal.classList.remove('hidden');
 
-  // Play audio using Text-to-Speech
-  const message = `
+    // Play audio using Text-to-Speech
+    const message = `
   Welcome to YogaAI. 
   Please wear fitting clothes, not baggy ones.
   Do yoga in good lighting.
@@ -88,31 +90,16 @@ document.addEventListener('DOMContentLoaded', function() {
   Always consult with a certified expert; this site may make mistakes.
   Stay safe and enjoy your practice!
   `;
-  const utterance = new SpeechSynthesisUtterance(message);
-  utterance.lang = 'en-US';
-  speechSynthesis.speak(utterance);
-
-  // Close modal on button click
-  closeBtn.addEventListener('click', function() {
-    modal.classList.add('hidden');
-    speechSynthesis.cancel(); // stop speaking if modal closed
-  });
-});
-</script>
-
-<!-- <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    const modal = document.getElementById('welcomeModal');
-    const closeBtn = document.getElementById('closeModal');
-
-    // Show modal when page loads
-    modal.classList.remove('hidden');
+    const utterance = new SpeechSynthesisUtterance(message);
+    utterance.lang = 'en-US';
+    speechSynthesis.speak(utterance);
 
     // Close modal on button click
-    closeBtn.addEventListener('click', function() {
+    closeBtn.addEventListener('click', function () {
       modal.classList.add('hidden');
+      speechSynthesis.cancel(); // stop speaking if modal closed
     });
   });
-</script> -->
+</script>
 
 {% endblock %}
