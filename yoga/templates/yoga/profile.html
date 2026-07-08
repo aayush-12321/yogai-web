@@ -1,208 +1,895 @@
 {% extends "yoga/base.html" %}
-{% block title %}Profile - Yoga AI{% endblock %}
+{% block title %}Profile - YogaAI{% endblock %}
+
+{% block head %}
+<style>
+  :root {
+    /* neutrals - same slate family as the original */
+    --slate-50: #f8fafc;
+    --slate-100: #f1f5f9;
+    --slate-200: #e2e8f0;
+    --slate-400: #94a3b8;
+    --slate-600: #475569;
+    --slate-700: #334155;
+    --slate-900: #0f172a;
+
+    /* accents - same hues as the original, purple dropped */
+    --green-500: #22c55e;
+    --green-600: #16a34a;
+    --green-700: #15803d;
+    --green-tint: #dcfce7;
+
+    --blue-500: #3b82f6;
+    --blue-600: #2563eb;
+    --blue-tint: #dbeafe;
+
+    --amber-500: #eab308;
+    --amber-600: #a16207;
+    --amber-tint: #fef9c3;
+
+    --orange-500: #f97316;
+    --orange-600: #ea580c;
+    --orange-tint: #ffedd5;
+
+    --teal-500: #14b8a6;
+    --teal-600: #0d9488;
+    --teal-tint: #ccfbf1;
+
+    --red-500: #ef4444;
+    --red-600: #b91c1c;
+    --red-tint: #fee2e2;
+  }
+
+  .profile-page {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 20px;
+    max-width: 1180px;
+    margin: 0 auto;
+    color: var(--slate-900);
+  }
+
+  @media(max-width:880px) {
+    .profile-page {
+      grid-template-columns: 1fr
+    }
+  }
+
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 26px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .04), 0 10px 28px -18px rgba(15, 23, 42, .22);
+  }
+
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 18px
+  }
+
+  /* - profile card - */
+  .prof-avatar-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 7px;
+  }
+
+  .prof-avatar {
+    width: 84px;
+    height: 84px;
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow: 0 0 0 3px #fff, 0 0 0 4.5px var(--green-500);
+  }
+
+  .prof-name {
+    font-size: 1.22rem;
+    font-weight: 700;
+    color: var(--slate-900);
+    margin: 6px 0 0;
+    letter-spacing: -.01em;
+  }
+
+  .prof-email {
+    font-size: .78rem;
+    color: var(--slate-400);
+    margin: 0;
+  }
+
+  .prof-bio {
+    font-size: .85rem;
+    color: var(--slate-600);
+    margin: 6px 0 0;
+    line-height: 1.55;
+  }
+
+  .prof-dob {
+    font-size: .78rem;
+    color: var(--slate-400);
+    margin-top: 2px;
+  }
+
+  .medical-note {
+    background: var(--amber-tint);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: .78rem;
+    color: #92400e;
+    line-height: 1.55;
+    width: 100%;
+    box-sizing: border-box;
+    text-align: left;
+    margin-top: 4px;
+  }
+
+  .medical-note strong {
+    font-weight: 700;
+  }
+
+  .btn-edit {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--green-600);
+    color: #fff;
+    border-radius: 30px;
+    padding: 8px 20px;
+    font-size: .8rem;
+    font-weight: 600;
+    text-decoration: none;
+    margin-top: 6px;
+    transition: background .15s ease;
+  }
+
+  .btn-edit:hover {
+    background: var(--green-700);
+    color: #fff;
+  }
+
+  /* - calendar (signature element) - */
+  .cal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .cal-title {
+    font-weight: 700;
+    font-size: .95rem;
+    color: var(--slate-900);
+  }
+
+  .cal-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    color: var(--slate-600);
+    transition: background .12s ease, color .12s ease;
+  }
+
+  .cal-nav:hover {
+    background: var(--green-tint);
+    color: var(--green-700);
+  }
+
+  .cal-nav svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    row-gap: 8px;
+    text-align: center;
+  }
+
+  .cal-grid .dlbl {
+    font-size: .64rem;
+    font-weight: 500;
+    color: var(--slate-400);
+    padding-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+  }
+
+  .cal-day {
+    position: relative;
+    font-size: .74rem;
+    font-weight: 500;
+    color: var(--slate-600);
+    width: 26px;
+    height: 26px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+  }
+
+  .cal-day.out-month,
+  .cal-day.future {
+    color: var(--slate-200);
+    opacity: .8
+  }
+
+  .cal-day.practiced {
+    background: var(--green-500);
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .cal-day.is-today {
+    box-shadow: 0 0 0 1.5px var(--blue-500);
+    font-weight: 700;
+    color: var(--slate-900);
+  }
+
+  .cal-day.is-today.practiced {
+    color: #fff;
+  }
+
+  .cal-legend {
+    margin: 14px 0 0;
+    font-size: .7rem;
+    color: var(--slate-400);
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .cal-legend .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--green-500);
+    display: inline-block;
+  }
+
+  /* - main column - */
+  .main-content {
+    display: flex;
+    flex-direction: column;
+    gap: 18px
+  }
+
+  .section-title {
+    font-size: .95rem;
+    font-weight: 700;
+    color: var(--slate-900);
+    margin: 0 0 16px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+
+  .section-title svg {
+    width: 17px;
+    height: 17px;
+    color: var(--teal-600);
+    flex-shrink: 0;
+  }
+
+  /* - filters - */
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-end
+  }
+
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px
+  }
+
+  .filter-label {
+    font-size: .68rem;
+    font-weight: 700;
+    color: var(--slate-400);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+  }
+
+  .filter-input,
+  .filter-select {
+    border: none;
+    border-radius: 9px;
+    padding: 9px 12px;
+    font-size: .82rem;
+    color: var(--slate-700);
+    outline: none;
+    background: var(--slate-50);
+    min-width: 130px;
+    transition: box-shadow .15s ease;
+  }
+
+  .filter-input:focus,
+  .filter-select:focus {
+    box-shadow: 0 0 0 1.5px var(--green-500)
+  }
+
+  .preset-buttons {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap
+  }
+
+  .preset-btn {
+    border: none;
+    background: var(--slate-50);
+    color: var(--slate-600);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: .77rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all .15s ease;
+  }
+
+  .preset-btn:hover {
+    color: var(--slate-900)
+  }
+
+  .preset-btn.active {
+    background: var(--green-600);
+    color: #fff;
+    font-weight: 600
+  }
+
+  .btn-apply {
+    border: none;
+    background: var(--slate-900);
+    color: #fff;
+    border-radius: 9px;
+    padding: 9px 18px;
+    font-size: .82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s ease;
+  }
+
+  .btn-apply:hover {
+    background: var(--green-700)
+  }
+
+  /* - KPI cards - */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+  }
+
+  .kpi-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 18px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .04), 0 8px 20px -16px rgba(15, 23, 42, .25);
+    transition: box-shadow .18s ease, transform .18s ease;
+  }
+
+  .kpi-card:hover {
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .05), 0 14px 26px -14px rgba(15, 23, 42, .3);
+    transform: translateY(-2px)
+  }
+
+  .kpi-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+  }
+
+  .kpi-icon svg {
+    width: 20px;
+    height: 20px
+  }
+
+  .kpi-card.green .kpi-icon {
+    color: var(--green-600)
+  }
+
+  .kpi-card.blue .kpi-icon {
+    color: var(--blue-600)
+  }
+
+  .kpi-card.amber .kpi-icon {
+    color: var(--amber-600)
+  }
+
+  .kpi-card.orange .kpi-icon {
+    color: var(--orange-600)
+  }
+
+  .kpi-card.teal .kpi-icon {
+    color: var(--teal-600)
+  }
+
+  .kpi-value {
+    font-size: 1.55rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -.02em;
+    color: var(--slate-900);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .kpi-label {
+    font-size: .72rem;
+    color: var(--slate-400);
+    font-weight: 500;
+  }
+
+  .kpi-value.loading {
+    color: transparent;
+    background: var(--slate-200);
+    border-radius: 4px;
+    min-width: 54px;
+    min-height: 22px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .kpi-value.loading::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .7), transparent);
+    animation: shimmer .9s infinite;
+  }
+
+  @keyframes shimmer {
+    to {
+      transform: translateX(100%)
+    }
+  }
+
+  /* - sessions table - */
+  .session-table,
+  .pose-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .83rem
+  }
+
+  .session-table thead th,
+  .pose-table th {
+    text-align: left;
+    padding: 8px 12px;
+    color: var(--slate-400);
+    font-size: .68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    border-bottom: 1px solid var(--slate-200);
+  }
+
+  .session-table tbody td,
+  .pose-table td {
+    padding: 11px 12px;
+    color: var(--slate-700);
+    border-bottom: 1px solid var(--slate-100);
+  }
+
+  .session-table tbody tr:last-child td,
+  .pose-table tbody tr:last-child td {
+    border-bottom: none
+  }
+
+  .session-table tbody tr:hover td,
+  .pose-table tbody tr:hover td {
+    background: var(--slate-50)
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: .72rem;
+    font-weight: 600;
+  }
+
+  .badge::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%
+  }
+
+  .badge.excellent {
+    background: var(--green-tint);
+    color: var(--green-700)
+  }
+
+  .badge.excellent::before {
+    background: var(--green-500)
+  }
+
+  .badge.good {
+    background: var(--amber-tint);
+    color: var(--amber-600)
+  }
+
+  .badge.good::before {
+    background: var(--amber-500)
+  }
+
+  .badge.low {
+    background: var(--red-tint);
+    color: var(--red-600)
+  }
+
+  .badge.low::before {
+    background: var(--red-500)
+  }
+
+  .pose-tag {
+    display: inline-block;
+    color: var(--green-700);
+    font-size: .82rem;
+    font-weight: 600;
+    text-transform: capitalize;
+  }
+
+  .empty-msg {
+    text-align: center;
+    padding: 30px 0;
+    color: var(--slate-400);
+    font-size: .86rem
+  }
+
+  .acc-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px
+  }
+
+  .acc-bar {
+    flex: 1;
+    height: 4px;
+    background: var(--slate-100);
+    border-radius: 3px;
+    overflow: hidden
+  }
+
+  .acc-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width .4s ease
+  }
+
+  .acc-val {
+    font-size: .8rem;
+    font-weight: 700;
+    color: var(--slate-900);
+    min-width: 34px
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+<div class="profile-page">
 
-  <!-- Left Panel: User Info -->
-  <div class="bg-white shadow rounded-lg p-6">
-    <div class="flex flex-col items-center">
-      <img src="{% if user.profile.avatar %}{{ user.profile.avatar.url }}{% else %}https://via.placeholder.com/128x128?text=No+Image{% endif %}" alt="Profile Picture" class="w-32 h-32 rounded-full mb-4 object-cover border-2 border-gray-200">
-      <h2 class="text-2xl font-semibold mb-1">{{ user.get_full_name|default:user.username }}</h2>
-      <p class="text-gray-600 mb-2">{{ user.email }}</p>
-      {% if user.profile.bio %}
-        <p class="text-gray-500 text-sm mb-2">{{ user.profile.bio }}</p>
-      {% endif %}
-      {% if user.profile.date_of_birth %}
-        <p class="text-gray-500 text-sm mb-2">Born: {{ user.profile.date_of_birth|date:"M d, Y" }}</p>
-      {% endif %}
-      {% if user.profile.medical_condition %}
-        <div class="text-gray-500 text-sm mb-4 p-2 bg-yellow-50 rounded">
-          <strong>Medical Notes:</strong> {{ user.profile.medical_condition }}
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+
+    <!-- User info -->
+    <div class="card">
+      <div class="prof-avatar-wrap">
+        <img
+          src="{% if user.profile.avatar %}{{ user.profile.avatar.url }}{% else %}https://ui-avatars.com/api/?name={{ user.username }}&background=22c55e&color=fff&size=128{% endif %}"
+          alt="Avatar" class="prof-avatar">
+        <p class="prof-name">{{ user.get_full_name|default:user.username }}</p>
+        <p class="prof-email">{{ user.email }}</p>
+        {% if user.profile.bio %}<p class="prof-bio">{{ user.profile.bio }}</p>{% endif %}
+        {% if user.profile.date_of_birth %}<span class="prof-dob">&#127874;
+          {{ user.profile.date_of_birth|date:"M d,Y"}}</span>{% endif %}
+        {% if user.profile.medical_condition %}
+        <div class="medical-note"><strong>&#9888; Medical notes</strong><br>{{ user.profile.medical_condition }}</div>
+        {% endif %}
+        <a href="{% url 'yoga:edit_profile' %}" class="btn-edit">Edit profile</a>
+      </div>
+    </div>
+
+    <!-- Practice calendar -->
+    <div class="card">
+      <div class="cal-header">
+        <a href="?month={{ prev_month.month }}&year={{ prev_month.year }}" class="cal-nav" aria-label="Previous month">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </a>
+        <span class="cal-title">{{ month_name }} {{ year }}</span>
+        <a href="?month={{ next_month.month }}&year={{ next_month.year }}" class="cal-nav" aria-label="Next month">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </a>
+      </div>
+      <div class="cal-grid">
+        <span class="dlbl">Su</span><span class="dlbl">Mo</span><span class="dlbl">Tu</span>
+        <span class="dlbl">We</span><span class="dlbl">Th</span><span class="dlbl">Fr</span><span class="dlbl">Sa</span>
+        {% for day in calendar_days %}
+        <div class="cal-day
+            {% if not day.in_month %}out-month
+            {% elif day.future %}future
+            {% elif day.practiced %}practiced
+            {% endif %}
+            {% if day.is_today %}is-today{% endif %}">{{ day.label }}</div>
+        {% endfor %}
+      </div>
+      <p class="cal-legend"><span class="dot"></span> practice day</p>
+    </div>
+
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <div class="main-content">
+
+    <!-- Filters -->
+    <div class="card">
+      <p class="section-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+          stroke-linejoin="round">
+          <line x1="4" y1="6" x2="20" y2="6"></line>
+          <line x1="8" y1="12" x2="16" y2="12"></line>
+          <line x1="11" y1="18" x2="13" y2="18"></line>
+        </svg>
+        Stats &amp; filters
+      </p>
+      <div style="margin-bottom:14px;">
+        <div class="filter-label" style="margin-bottom:6px;">Quick range</div>
+        <div class="preset-buttons">
+          <button class="preset-btn active" onclick="applyPreset('all',this)">All time</button>
+          <button class="preset-btn" onclick="applyPreset('today',this)">Today</button>
+          <button class="preset-btn" onclick="applyPreset('7',this)">Last 7 days</button>
+          <button class="preset-btn" onclick="applyPreset('30',this)">Last 30 days</button>
+          <button class="preset-btn" onclick="applyPreset('90',this)">Last 3 months</button>
         </div>
-      {% endif %}
-      <div class="flex space-x-4">
-        <a href="{% url 'yoga:edit_profile' %}" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition duration-200">Edit Profile</a>
+      </div>
+      <div class="filter-bar">
+        <div class="filter-group">
+          <label class="filter-label" for="startDate">From</label>
+          <input type="date" id="startDate" class="filter-input" onchange="clearPresets()">
+        </div>
+        <div class="filter-group">
+          <label class="filter-label" for="endDate">To</label>
+          <input type="date" id="endDate" class="filter-input" onchange="clearPresets()">
+        </div>
+        <div class="filter-group">
+          <label class="filter-label" for="poseFilter">Pose</label>
+          <select id="poseFilter" class="filter-select">
+            <option value="">All poses</option>
+            {% for p in available_poses %}<option value="{{ p }}">{{ p|title }}</option>{% endfor %}
+          </select>
+        </div>
+        <button class="btn-apply" onclick="loadStats()">Apply</button>
       </div>
     </div>
-  </div>
 
-  <!-- Stats Panel
-  <div class="bg-white shadow rounded-lg p-6 mt-8">
-    <h3 class="text-xl font-semibold text-gray-900 mb-4">Your Yoga Stats</h3>
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div class="text-center">
-        <div class="text-2xl font-bold text-green-600">0</div>
-        <p class="text-sm text-gray-600">Total Sessions</p>
+    <!-- KPI cards -->
+    <div class="stats-grid">
+      <div class="kpi-card green">
+        <span class="kpi-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+            stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9"></circle>
+            <path d="M12 7v5l3 2"></path>
+          </svg>
+        </span>
+        <span class="kpi-value" id="kpi-sessions">{{ total_sessions }}</span>
+        <span class="kpi-label">Total sessions</span>
       </div>
-      <div class="text-center">
-        <div class="text-2xl font-bold text-blue-600">0%</div>
-        <p class="text-sm text-gray-600">Avg Accuracy</p>
+      <div class="kpi-card blue">
+        <span class="kpi-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+            stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9"></circle>
+            <circle cx="12" cy="12" r="4"></circle>
+            <circle cx="12" cy="12" r=".6" fill="currentColor"></circle>
+          </svg>
+        </span>
+        <span class="kpi-value" id="kpi-accuracy">{{ avg_accuracy }}%</span>
+        <span class="kpi-label">Avg accuracy</span>
       </div>
-      <div class="text-center">
-        <div class="text-2xl font-bold text-purple-600">0 hrs</div>
-        <p class="text-sm text-gray-600">Total Time</p>
+      <div class="kpi-card amber">
+        <span class="kpi-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+            stroke-linejoin="round">
+            <rect x="4" y="5" width="16" height="16" rx="2.5"></rect>
+            <path d="M8 3v4M16 3v4M4 10h16"></path>
+          </svg>
+        </span>
+        <span class="kpi-value" id="kpi-hours">{{ total_hours }} hrs</span>
+        <span class="kpi-label">Practice time</span>
       </div>
-      <div class="text-center">
-        <div class="text-2xl font-bold text-orange-600">0 days</div>
-        <p class="text-sm text-gray-600">Best Streak</p>
+      <div class="kpi-card orange">
+        <span class="kpi-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path
+              d="M12 21c4.5 0 7-2.7 7-6.4 0-3.4-2.3-5.7-4-8.6-.4 1.6-1.3 2.6-2.3 2.6-1.7 0-1-3.2-2.3-5.6C8 5 6 8.4 6 11.4 5 12.9 5 14 5 14.6 5 18.3 7.5 21 12 21Z">
+            </path>
+          </svg>
+        </span>
+        <span class="kpi-value" id="kpi-streak">{{ longest_streak }} days</span>
+        <span class="kpi-label">Longest streak</span>
+      </div>
+      <div class="kpi-card teal">
+        <span class="kpi-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path d="M20 6 9 17l-5-5"></path>
+          </svg>
+        </span>
+        <span class="kpi-value" id="kpi-continuous">&#8212;</span>
+        <span class="kpi-label">Longest correct run</span>
       </div>
     </div>
-    <div class="mt-4 text-center border-t pt-4">
-      <div class="text-lg font-bold text-indigo-600">0s</div>
-      <p class="text-sm text-gray-600">Longest Correct Pose Time</p>
+
+    <!-- Recent sessions -->
+    <div class="card">
+      <p class="section-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+          stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9"></circle>
+          <path d="M12 7v5l3.5 1.8"></path>
+        </svg>
+        Recent sessions
+      </p>
+      <table class="session-table">
+        <thead>
+          <tr>
+            <th>Pose</th>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Duration</th>
+            <th>Accuracy</th>
+          </tr>
+        </thead>
+        <tbody id="sessionsBody">
+          <tr>
+            <td colspan="5" class="empty-msg">Loading&#8230;</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-  </div> -->
 
-  <!-- Middle Panel: Calendar -->
-  <!-- Calendar Section -->
-<div class="bg-white shadow rounded-lg p-6 mt-8">
-  <a href="?month={{ prev_month.month }}&year={{ prev_month.year }}"
-     class="text-green-600 font-bold text-lg hover:text-green-800 " >
-     ⬅️
-  </a>
-  <a href="?month={{ next_month.month }}&year={{ next_month.year }}"
-     class="text-green-600 font-bold text-lg hover:text-green-800 float-right  ">
-     ➡️
-  </a>
-  <h3 class="text-xl font-bold text-center text-green-600 mb-4 ">
-    {{ month_name }} {{ year }}
-  </h3>
+    <!-- Per-pose breakdown -->
+    <div class="card">
+      <p class="section-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+          stroke-linejoin="round">
+          <path d="M4 19h16M8 19V9M13 19V5M18 19v12"></path>
+        </svg>
+        Pose breakdown
+      </p>
+      <table class="pose-table">
+        <thead>
+          <tr>
+            <th>Pose</th>
+            <th>Sessions</th>
+            <th>Time</th>
+            <th>Avg accuracy</th>
+          </tr>
+        </thead>
+        <tbody id="poseBody">
+          <tr>
+            <td colspan="4" class="empty-msg">Loading&#8230;</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
-  <!-- Weekday Labels -->
-  <div class="grid grid-cols-7 text-center font-semibold text-gray-700 mb-2">
-    <div>Sun</div><div>Mon</div><div>Tue</div>
-    <div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
-  </div>
-
-  <!-- Calendar Grid -->
- <div class="grid grid-cols-7 gap-2 text-center">
-    {% for day in calendar_days %}
-      <div class="p-3 rounded-lg text-sm font-medium
-        {% if not day.in_month %} text-gray-400 {% endif %}
-        {% if day.future %} bg-gray-200 text-gray-400 {% endif %}
-        {% if day.practiced %} bg-green-400 text-white {% endif %}
-        {% if day.is_today %} border-2 border-blue-500 {% endif %}
-      ">
-        {{ day.label }}
-      </div>
-    {% endfor %}
   </div>
 </div>
-  <!-- End Calendar Section -->
 
-  <!-- Right Panel: Stats & Analytics -->
- <!-- <div class="bg-white shadow rounded-lg p-6">
-    <h3 class="text-xl font-bold mb-4 text-center">Stats & Analytics</h3>
-    <div class="space-y-4">
-      <div class="bg-gray-50 p-4 rounded-lg border text-center">
-        <h4 class="text-lg font-semibold">{{ total_sessions }}</h4>
-        <p class="text-gray-600">Total Sessions</p>
-      </div>
-      <div class="bg-gray-50 p-4 rounded-lg border text-center">
-        <h4 class="text-lg font-semibold">{{ longest_streak }} days</h4>
-        <p class="text-gray-600">Longest Streak</p>
-      </div>
-      <div class="bg-gray-50 p-4 rounded-lg border text-center">
-        <h4 class="text-lg font-semibold">{{ total_hours }} hrs</h4>
-        <p class="text-gray-600">Practice Time</p>
-      </div>
-    </div>
-  </div> -->
-
-              <div class="bg-white shadow rounded-lg p-6">
-                <h3 class="text-xl font-bold mb-4 text-center">Stats & Analytics</h3>
-                <div class="space-y-4">
-                    
-                    <!-- Total Sessions -->
-                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200 text-center">
-                        <h4  id="totalSessions" class="text-3xl font-bold text-blue-700">{{ total_sessions }}</h4>
-                        <p class="text-gray-700 font-medium">Total Sessions</p>
-                    </div>
-                    
-                    <!-- Average Accuracy -->
-                    <div class="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border border-green-200 text-center">
-                        <h4 id="avgAccuracy" class="text-3xl font-bold text-green-700">{{ avg_accuracy }}%</h4>
-                        <p class="text-gray-700 font-medium">Average Accuracy</p>
-                    </div>
-                    
-                    <!-- Total Hours -->
-                    <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200 text-center">
-                        <h4 id="totalHours" class="text-3xl font-bold text-purple-700">{{ total_hours }} hrs</h4>
-                        <p class="text-gray-700 font-medium">Practice Time</p>
-                    </div>
-                    
-                    <!-- Longest Streak -->
-                    <div class="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-lg border border-orange-200 text-center">
-                        <h4 id="longestStreak" class="text-3xl font-bold text-orange-700">{{ longest_streak }} days</h4>
-                        <p class="text-gray-700 font-medium">Longest Streak</p>
-                    </div>
-                    
-                    <!-- Longest Continuous Time -->
-                    <div class="bg-gradient-to-br from-indigo-50 to-indigo-100 p-4 rounded-lg border border-indigo-200 text-center">
-                        <h4 id="longestContinuous" class="text-3xl font-bold text-indigo-700">0s</h4>
-                        <p class="text-gray-700 font-medium">Longest Correct Pose Time</p>
-                    </div>
-<!-- <h4 id="totalSessions" class="text-3xl font-bold text-blue-700">0</h4>
-<h4 id="avgAccuracy" class="text-3xl font-bold text-green-700">0%</h4>
-<h4 id="totalHours" class="text-3xl font-bold text-purple-700">0 hrs</h4>
-<h4 id="longestStreak" class="text-3xl font-bold text-orange-700">0 days</h4> -->
-
-</div>
 <script>
-// Load stats dynamically
-async function loadUserStats() {
+  function todayStr() { return new Date().toISOString().slice(0, 10); }
+  function offsetStr(d) { var dt = new Date(); dt.setDate(dt.getDate() - d); return dt.toISOString().slice(0, 10); }
+
+  function applyPreset(key, btn) {
+    document.querySelectorAll('.preset-btn').forEach(function (b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    var sd = document.getElementById('startDate'), ed = document.getElementById('endDate');
+    ed.value = todayStr();
+    if (key === 'all') { sd.value = ''; ed.value = ''; }
+    else if (key === 'today') { sd.value = todayStr(); }
+    else if (key === '7') { sd.value = offsetStr(6); }
+    else if (key === '30') { sd.value = offsetStr(29); }
+    else if (key === '90') { sd.value = offsetStr(89); }
+    loadStats();
+  }
+
+  function clearPresets() {
+    document.querySelectorAll('.preset-btn').forEach(function (b) { b.classList.remove('active'); });
+  }
+
+  function setLoading(on) {
+    ['kpi-sessions', 'kpi-accuracy', 'kpi-hours', 'kpi-streak', 'kpi-continuous'].forEach(function (id) {
+      document.getElementById(id).classList.toggle('loading', on);
+    });
+  }
+
+  async function loadStats() {
+    setLoading(true);
     try {
-        const userId = '{{ user.id }}' || null;
-        const url = userId 
-            ? `/api/yoga/user/stats/?user_id=${userId}`
-            : '/api/yoga/user/stats/';
-        
-        const response = await fetch(url);
-        const data = await response.json();
-        
-        // Update stats
-        document.getElementById('totalSessions').textContent = data.total_sessions;
-        document.getElementById('avgAccuracy').textContent = data.avg_accuracy + '%';
-        document.getElementById('totalHours').textContent = data.total_hours + ' hrs';
-        document.getElementById('longestStreak').textContent = data.longest_streak + ' days';
-        document.getElementById('longestContinuous').textContent = data.longest_continuous_time + 's';
-        
-        // Update recent sessions
-        updateRecentSessions(data.recent_sessions);
-        
-    } catch (error) {
-        console.error('Error loading stats:', error);
+      var params = new URLSearchParams();
+      var sd = document.getElementById('startDate').value;
+      var ed = document.getElementById('endDate').value;
+      var pose = document.getElementById('poseFilter').value;
+      if (sd) params.set('start_date', sd);
+      if (ed) params.set('end_date', ed);
+      if (pose) params.set('pose_name', pose);
+      var res = await fetch('/api/yoga/user/stats/?' + params.toString());
+      if (!res.ok) { setLoading(false); return; }
+      var data = await res.json();
+      document.getElementById('kpi-sessions').textContent = data.total_sessions;
+      document.getElementById('kpi-accuracy').textContent = data.avg_accuracy + '%';
+      document.getElementById('kpi-hours').textContent = data.total_hours + ' hrs';
+      document.getElementById('kpi-streak').textContent = data.longest_streak + ' days';
+      document.getElementById('kpi-continuous').textContent = data.longest_continuous_time + 's';
+      renderSessions(data.recent_sessions || []);
+      renderPoseBreakdown(data.per_pose_breakdown || []);
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  }
+
+  function renderSessions(sessions) {
+    var tbody = document.getElementById('sessionsBody');
+    if (!sessions.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty-msg">No sessions found for selected filters.</td></tr>';
+      return;
     }
-}
+    tbody.innerHTML = sessions.map(function (s) {
+      var cls = s.accuracy >= 80 ? 'excellent' : s.accuracy >= 55 ? 'good' : 'low';
+      var lbl = s.accuracy >= 80 ? 'Excellent' : s.accuracy >= 55 ? 'Good' : 'Needs work';
+      return '<tr>' +
+        '<td><span class="pose-tag">' + s.pose + '</span></td>' +
+        '<td>' + s.date + '</td>' +
+        '<td>' + s.time + '</td>' +
+        '<td>' + s.duration + '</td>' +
+        '<td><span class="badge ' + cls + '">' + s.accuracy + '% &middot; ' + lbl + '</span></td>' +
+        '</tr>';
+    }).join('');
+  }
 
-function updateRecentSessions(sessions) {
-//     const container = document.getElementById('recentSessionsContainer');
-    
-//     if (sessions.length === 0) {
-//         container.innerHTML = '<p class="text-center text-gray-500">No sessions yet</p>';
-//         return;
-//     }
-    
-    container.innerHTML = sessions.map(session => `
-        <div class="bg-gray-50 p-4 rounded-lg border hover:shadow-md transition-shadow">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h4 class="font-bold text-lg text-gray-900">${session.pose}</h4>
-                    <p class="text-sm text-gray-600">${session.date} at ${session.time}</p>
-                </div>
-                <div class="text-right">
-                    <div class="text-2xl font-bold ${session.accuracy >= 80 ? 'text-green-600' : session.accuracy >= 60 ? 'text-yellow-600' : 'text-red-600'}">
-                        ${session.accuracy}%
-                    </div>
-                    <p class="text-sm text-gray-600">${session.duration}</p>
-                </div>
-            </div>
-        </div>
-    `).join('');
-}
-// Load stats on page load
-document.addEventListener('DOMContentLoaded', loadUserStats);
+  function renderPoseBreakdown(breakdown) {
+    var tbody = document.getElementById('poseBody');
+    if (!breakdown.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="empty-msg">No pose data yet.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = breakdown.map(function (p) {
+      var w = Math.min(100, Math.round(p.avg_accuracy));
+      var col = p.avg_accuracy >= 80 ? '#16a34a' : p.avg_accuracy >= 55 ? '#a16207' : '#b91c1c';
+      return '<tr>' +
+        '<td><span class="pose-tag">' + p.pose + '</span></td>' +
+        '<td style="font-weight:700">' + p.sessions + '</td>' +
+        '<td>' + p.total_mins + ' min</td>' +
+        '<td><div class="acc-bar-wrap"><div class="acc-bar"><div class="acc-bar-fill" style="width:' + w + '%;background:' + col + '"></div></div><span class="acc-val">' + p.avg_accuracy + '%</span></div></td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  document.addEventListener('DOMContentLoaded', loadStats);
 </script>
-
 {% endblock %}

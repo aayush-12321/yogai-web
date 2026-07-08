@@ -289,16 +289,19 @@ class StartSessionView(APIView):
 
     def post(self, request):
         pose_name = request.data.get("pose", "plank")
-        user_id   = request.data.get("user_id")
-
+        
         session_data = {"pose_name": pose_name}
 
-        if user_id:
-            from django.contrib.auth.models import User
-            try:
-                session_data["user"] = User.objects.get(id=user_id)
-            except User.DoesNotExist:
-                pass
+        if request.user and request.user.is_authenticated:
+            session_data["user"] = request.user
+        else:
+            user_id = request.data.get("user_id")
+            if user_id:
+                from django.contrib.auth.models import User
+                try:
+                    session_data["user"] = User.objects.get(id=user_id)
+                except User.DoesNotExist:
+                    pass
 
         try:
             session = YogaSession.objects.create(**session_data)
@@ -388,16 +391,41 @@ class SessionHistoryView(APIView):
 #  User stats ─
 
 class UserStatsView(APIView):
-    """GET /api/yoga/user/stats/?user_id=1"""
+    """
+    GET /api/yoga/user/stats/
+    
+    Query params:
+      - start_date  (YYYY-MM-DD)  filter sessions on/after this date
+      - end_date    (YYYY-MM-DD)  filter sessions on/before this date
+      - pose_name   (str)         filter by pose, e.g. 'mountain'
+    
+    Authentication required. Users can only view their own stats.
+    """
 
     def get(self, request):
         try:
-            user_id  = request.query_params.get("user_id")
-            sessions = YogaSession.objects.all()
-            if user_id:
-                sessions = sessions.filter(user_id=user_id)
+            # --- Auth: only allow authenticated users viewing their own stats ---
+            if not request.user or not request.user.is_authenticated:
+                return Response({"error": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            completed = sessions.filter(ended_at__isnull=False)
+            user = request.user
+
+            # Filter params
+            start_date = request.query_params.get("start_date")
+            end_date   = request.query_params.get("end_date")
+            pose_name  = request.query_params.get("pose_name", "").strip()
+
+            completed = YogaSession.objects.filter(
+                user=user,
+                ended_at__isnull=False
+            )
+
+            if start_date:
+                completed = completed.filter(started_at__date__gte=start_date)
+            if end_date:
+                completed = completed.filter(started_at__date__lte=end_date)
+            if pose_name:
+                completed = completed.filter(pose_name__iexact=pose_name)
 
             total_sessions = completed.count()
             avg_accuracy   = completed.aggregate(
@@ -416,7 +444,7 @@ class UserStatsView(APIView):
             per_pose                = self._per_pose_breakdown(completed)
 
             recent = []
-            for s in completed.order_by("-started_at")[:5]:
+            for s in completed.order_by("-started_at")[:10]:
                 dur = (s.ended_at - s.started_at).total_seconds() if s.ended_at else 0
                 recent.append({
                     "id":       s.id,
@@ -455,42 +483,50 @@ class UserStatsView(APIView):
         return longest
 
     def _longest_continuous_correct(self, sessions) -> float:
+        """Measures the longest unbroken run of consecutive correct detections.
+        A run breaks when the gap between two consecutive correct detections > 2s."""
         max_time = 0.0
         for session in sessions:
-            detections = session.detections.filter(is_correct=True).order_by("timestamp")
-            if not detections.exists():
+            detections = list(
+                session.detections.filter(is_correct=True).order_by("timestamp")
+            )
+            if not detections:
                 continue
-            streak_start = None
-            streak_time  = 0.0
-            for det in detections:
-                if streak_start is None:
+            streak_start = detections[0].timestamp
+            prev_ts      = detections[0].timestamp
+            for det in detections[1:]:
+                gap = (det.timestamp - prev_ts).total_seconds()
+                if gap > 2.0:
+                    # streak broken — check and reset
+                    run = (prev_ts - streak_start).total_seconds()
+                    max_time     = max(max_time, run)
                     streak_start = det.timestamp
-                else:
-                    diff = (det.timestamp - streak_start).total_seconds()
-                    if diff <= 2.0:
-                        streak_time = diff
-                    else:
-                        max_time     = max(max_time, streak_time)
-                        streak_start = det.timestamp
-                        streak_time  = 0.0
-            max_time = max(max_time, streak_time)
+                prev_ts = det.timestamp
+            # final run
+            run = (prev_ts - streak_start).total_seconds()
+            max_time = max(max_time, run)
         return round(max_time, 1)
 
-    def _per_pose_breakdown(self, sessions) -> dict:
+    def _per_pose_breakdown(self, sessions) -> list:
         breakdown: dict = {}
         for s in sessions:
             pose = s.pose_name
             if pose not in breakdown:
-                breakdown[pose] = {"sessions": 0, "accuracy_sum": 0.0}
+                breakdown[pose] = {"sessions": 0, "accuracy_sum": 0.0, "seconds": 0.0}
             breakdown[pose]["sessions"]     += 1
             breakdown[pose]["accuracy_sum"] += s.accuracy
-        return {
-            pose: {
+            if s.started_at and s.ended_at:
+                breakdown[pose]["seconds"] += (s.ended_at - s.started_at).total_seconds()
+        result = []
+        for pose, v in breakdown.items():
+            mins = int(v["seconds"] // 60)
+            result.append({
+                "pose":         pose,
                 "sessions":     v["sessions"],
                 "avg_accuracy": round(v["accuracy_sum"] / v["sessions"], 1),
-            }
-            for pose, v in breakdown.items()
-        }
+                "total_mins":   mins,
+            })
+        return sorted(result, key=lambda x: x["sessions"], reverse=True)
 
 
 #  Utility endpoints 
