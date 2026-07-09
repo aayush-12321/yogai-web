@@ -1,0 +1,81 @@
+{
+  "pose": "chair_pose",
+  "experiment_tag": "full_class",
+  "model": "xgboost",
+  "feature_columns": [
+    "camera_knee_flexion_angle",
+    "camera_torso_hip_knee_angle",
+    "camera_shoulder_arm_angle",
+    "camera_wrist_shoulder_vertical_delta",
+    "camera_hip_knee_vertical_delta",
+    "camera_shoulder_ankle_horizontal_offset",
+    "camera_knee_ankle_horizontal_overhang"
+  ],
+  "n_features": 7,
+  "best_params": {
+    "classifier__subsample": 0.6,
+    "classifier__n_estimators": 200,
+    "classifier__min_child_weight": 1,
+    "classifier__max_depth": 5,
+    "classifier__learning_rate": 0.01,
+    "classifier__gamma": 0,
+    "classifier__colsample_bytree": 0.8
+  },
+  "best_cv_score": 0.925,
+  "cv_folds_scores": [
+    0.8714,
+    0.8987,
+    0.9525,
+    0.9774
+  ],
+  "test_f1_weighted": 0.6999,
+  "test_accuracy": 0.709,
+  "n_train": 2232,
+  "n_test": 701,
+  "cv_config": {
+    "n_splits": 5,
+    "random_seed": 42,
+    "scoring": "f1_weighted",
+    "n_jobs": -1
+  },
+  "class_map": {
+    "0": "bent_forward",
+    "1": "correct",
+    "2": "dropped_arms",
+    "3": "shallow_squat"
+  },
+  "latency": {
+    "mean_ms": 1.3131,
+    "std_ms": 0.4553,
+    "p95_ms": 2.0637,
+    "p99_ms": 2.9401,
+    "implied_max_fps": 761.6
+  },
+  "confusion_matrix": [
+    [
+      148,
+      0,
+      2,
+      0
+    ],
+    [
+      0,
+      116,
+      0,
+      135
+    ],
+    [
+      48,
+      7,
+      83,
+      12
+    ],
+    [
+      0,
+      0,
+      0,
+      150
+    ]
+  ],
+  "classification_report": "               precision    recall  f1-score   support\n\n bent_forward       0.76      0.99      0.86       150\n      correct       0.94      0.46      0.62       251\n dropped_arms       0.98      0.55      0.71       150\nshallow_squat       0.51      1.00      0.67       150\n\n     accuracy                           0.71       701\n    macro avg       0.79      0.75      0.71       701\n weighted avg       0.82      0.71      0.70       701\n"
+}

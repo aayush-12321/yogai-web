@@ -2,7 +2,7 @@
 master_pose_service.py
 
 ML inference service for the Master Pose Classifier.
-Predicts WHICH pose the user is performing (mountain, plank, or warrior2).
+Predicts WHICH pose the user is performing (mountain, plank, chair or warrior2).
 
 Feature engineering is an exact per-sample port of delete.py (master_model_fe.py).
 All features are 2D (x, y only). Key rules:
@@ -53,7 +53,7 @@ FEATURE_COLUMNS = [
 PROBABILITY_THRESHOLD = 0.0
 
 
-# ─── 2-D helpers (exact per-sample equivalents of delete.py batch helpers) ───
+#  2-D helpers (exact per-sample equivalents of delete.py batch helpers) 
 
 def _xy(landmarks, idx: int) -> np.ndarray:
     """Return 2-D (x, y) for one MediaPipe landmark."""
@@ -91,7 +91,7 @@ def _point_to_line_2d(p: np.ndarray, a: np.ndarray, b: np.ndarray) -> float:
     return float(cross / (np.linalg.norm(ab) + EPSILON))
 
 
-# ─── Per-feature-type computation ────────────────────────────────────────────
+#  Per-feature-type computation 
 
 def _joint_angle(landmarks, cfg: dict) -> float:
     """Port of delete.py _compute_joint_angles for a single sample."""
@@ -167,7 +167,7 @@ def _alignment_offset(landmarks, cfg: dict) -> float:
     return float(val)
 
 
-# ─── Top-level extraction ─────────────────────────────────────────────────────
+#  Top-level extraction 
 
 def extract_features(landmarks, feat_config: dict) -> Optional[np.ndarray]:
     """
@@ -200,7 +200,7 @@ def extract_features(landmarks, feat_config: dict) -> Optional[np.ndarray]:
     return None if not np.all(np.isfinite(row)) else row
 
 
-# ─── Stabilizer ──────────────────────────────────────────────────────────────
+#  Stabilizer 
 
 class PosePredictionStabilizer:
     """
@@ -239,7 +239,7 @@ class PosePredictionStabilizer:
         self.last_stable = None
 
 
-# ─── Classifier ──────────────────────────────────────────────────────────────
+#  Classifier 
 
 class MasterPoseClassifier:
     """
@@ -261,7 +261,7 @@ class MasterPoseClassifier:
 
         self._load(artefacts_root, yaml_path, force_model)
 
-    # ── Loading ────────────────────────────────────────────────────────────────
+    #  Loading ─
 
     def _load(self, artefacts_root: Path, yaml_path: Path, force_model: Optional[str]) -> None:
         if not yaml_path.exists():
@@ -285,15 +285,22 @@ class MasterPoseClassifier:
         else:
             results_csv = dir_results / f"{POSE_NAME}_{EXPERIMENT_TAG}_experiment_results.csv"
             if not results_csv.exists():
-                logger.error(f"Results CSV not found: {results_csv}")
-                return
-            df       = pd.read_csv(results_csv)
-            best_row = df.sort_values("test_f1_weighted", ascending=False).iloc[0]
-            selected = best_row["model"]
-            logger.info(
-                f"Master pose auto-selected: {selected} "
-                f"(test_f1={best_row['test_f1_weighted']:.4f})"
-            )
+                # Robust fallback: find any available pipeline model matching POSE_NAME and EXPERIMENT_TAG
+                pipelines = list(dir_models.glob(f"{POSE_NAME}_{EXPERIMENT_TAG}_*_pipeline.joblib"))
+                if pipelines:
+                    selected = pipelines[0].name.split(f"{POSE_NAME}_{EXPERIMENT_TAG}_")[1].replace("_pipeline.joblib", "")
+                    logger.warning(f"Results CSV not found. Falling back to available model: {selected}")
+                else:
+                    logger.error(f"Results CSV not found and no models found in {dir_models}")
+                    return
+            else:
+                df       = pd.read_csv(results_csv)
+                best_row = df.sort_values("test_f1_weighted", ascending=False).iloc[0]
+                selected = best_row["model"]
+                logger.info(
+                    f"Master pose auto-selected: {selected} "
+                    f"(test_f1={best_row['test_f1_weighted']:.4f})"
+                )
 
         prefix  = f"{POSE_NAME}_{EXPERIMENT_TAG}_{selected}"
         p_path  = dir_models / f"{prefix}_pipeline.joblib"
@@ -317,7 +324,7 @@ class MasterPoseClassifier:
             f"classes: {list(self.label_encoder.classes_)}"
         )
 
-    # ── Inference ──────────────────────────────────────────────────────────────
+    #  Inference 
 
     def predict_from_landmarks(self, landmarks) -> str:
         """

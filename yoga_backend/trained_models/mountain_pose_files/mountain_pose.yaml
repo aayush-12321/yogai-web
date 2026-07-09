@@ -13,10 +13,10 @@ dataset:
 
 feedback:
   correct: "Excellent posture. Keep your core engaged and breathe evenly."
-  arms_not_dropped: "Relax your arms completely down by your sides, fingers pointing toward the floor."
-  bent_forward: "Hinge back up from your hips. Keep your spine erect and chest open."
-  tilted_head: "Align your head center. Keep your chin parallel to the floor and ears directly over your shoulders."
-  wide_stance: "Bring your feet closer together. They should be hip-width apart or toes touching."
+  arms_not_dropped: "Relax your arms by your sides with your fingers pointing down."
+  bent_forward: "Straighten up and keep your chest lifted and spine straight."
+  tilted_head: "Keep your head centered and your chin parallel to the floor."
+  wide_stance: "Keep your feet hip-width apart or with your toes touching."
 
 # Configuration for your feature extraction pipeline
 features_config:

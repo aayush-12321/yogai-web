@@ -10,9 +10,9 @@ dataset:
   processed_dir: data/processed/plank_pose
 
 feedback:
-  correct: "Excellent form! Your body is in a perfect straight line. Keep your core tight."
-  high_back: "Lower your hips slightly. Your hips are raised too high, breaking the straight plank line."
-  low_back: "Engage your core and lift your hips up. Do not let your lower back sag toward the floor."
+  correct: "Excellent Plank! Keep your body in a straight line and your core engaged."
+  high_back: "Lower your hips slightly to form a straight line from head to heels."
+  low_back: "Engage your core and lift your hips slightly. Avoid letting your lower back sag."
 
 # Configuration for your feature extraction pipeline
 features_config:

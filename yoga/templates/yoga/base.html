@@ -1,6 +1,7 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>{% block title %}Yoga AI{% endblock %}</title>
@@ -8,39 +9,87 @@
   <script src="https://cdn.tailwindcss.com"></script>
   {% block head %}{% endblock %}
 </head>
+
 <body class="bg-gray-50 text-gray-900 flex flex-col min-h-screen">
 
   <!-- Navbar -->
   <header class="bg-white shadow sticky top-0 z-50">
     <div class="container mx-auto flex justify-between items-center p-4">
       <a href="{% url 'yoga:landing' %}" class="text-2xl font-bold text-green-600 hover:text-green-800">YogaAI</a>
-      <nav>
-        <ul class="flex space-x-6">
-          <li><a href="{% url 'yoga:landing' %}" class="hover:text-green-600">Home</a></li>
-          <li><a href="{% url 'yoga:poses' %}" class="hover:text-green-600">Poses</a></li>
+
+      <!-- Hamburger button (mobile only) -->
+      <button id="navToggle" class="md:hidden flex flex-col justify-center items-center w-10 h-10 space-y-1.5"
+        aria-label="Toggle menu" aria-expanded="false">
+        <span class="block w-6 h-0.5 bg-gray-900 transition-transform duration-300" id="barTop"></span>
+        <span class="block w-6 h-0.5 bg-gray-900 transition-opacity duration-300" id="barMid"></span>
+        <span class="block w-6 h-0.5 bg-gray-900 transition-transform duration-300" id="barBot"></span>
+      </button>
+
+      <nav class="hidden md:block">
+        <ul class="flex space-x-6 items-center">
+          <li><a href="{% url 'yoga:landing' %}"
+              class="hover:text-green-600 {% if request.resolver_match.url_name == 'landing' %}text-green-600 font-semibold{% endif %}">Home</a>
+          </li>
+          <li><a href="{% url 'yoga:poses' %}"
+              class="hover:text-green-600 {% if request.resolver_match.url_name == 'poses' %}text-green-600 font-semibold{% endif %}">Poses</a>
+          </li>
           {% if user.is_authenticated %}
-            <!-- <li><a href="{% url 'yoga:session' %}" class="hover:text-green-600">Session</a></li> -->
-            <!-- <li><a href="{% url 'yoga:stats' %}" class="hover:text-green-600">Stats</a></li> -->
-            <li><a href="{% url 'yoga:auto_session' %}" class="hover:text-green-600">Auto Detect</a></li>
-            <li><a href="{% url 'yoga:profile' %}" class="hover:text-green-600">Profile</a></li>
-             <li>
-              <a href="{% url 'yoga:logout' %}" 
-                class="bg-red-600 text-white font-medium py-2 px-4 rounded-lg shadow hover:bg-red-700 transition duration-300">
-                logout
-              </a>
-            </li></li>
+          <li><a href="{% url 'yoga:auto_session' %}"
+              class="hover:text-green-600 {% if request.resolver_match.url_name == 'auto_session' %}text-green-600 font-semibold{% endif %}">Auto
+              Detect</a></li>
+          <li><a href="{% url 'yoga:profile' %}"
+              class="hover:text-green-600 {% if request.resolver_match.url_name == 'profile' %}text-green-600 font-semibold{% endif %}">Profile</a>
+          </li>
+          <li>
+            <a href="{% url 'yoga:logout' %}"
+              class="bg-red-600 text-white font-medium py-2 px-4 rounded-lg shadow hover:bg-red-700 transition duration-300">
+              logout
+            </a>
+          </li>
           {% else %}
-            <li>
-              <a href="{% url 'yoga:signup' %}" 
-                class="bg-green-600 text-white font-medium py-2 px-4 rounded-lg shadow hover:bg-green-700 transition duration-300">
-                Sign Up / Login
-              </a>
-            </li>
-            <!-- <li><a href="{% url 'yoga:login' %}" class="hover:text-green-600">Login</a></li> -->
+          <li>
+            <a href="{% url 'yoga:signup' %}"
+              class="bg-green-600 text-white font-medium py-2 px-4 rounded-lg shadow hover:bg-green-700 transition duration-300">
+              Sign Up / Login
+            </a>
+          </li>
           {% endif %}
         </ul>
       </nav>
     </div>
+
+    <!-- Mobile dropdown menu -->
+    <nav id="mobileMenu" class="hidden md:hidden bg-white border-t">
+      <ul class="flex flex-col px-4 py-3 space-y-3">
+        <li><a href="{% url 'yoga:landing' %}"
+            class="block hover:text-green-600 {% if request.resolver_match.url_name == 'landing' %}text-green-600 font-semibold{% endif %}">Home</a>
+        </li>
+        <li><a href="{% url 'yoga:poses' %}"
+            class="block hover:text-green-600 {% if request.resolver_match.url_name == 'poses' %}text-green-600 font-semibold{% endif %}">Poses</a>
+        </li>
+        {% if user.is_authenticated %}
+        <li><a href="{% url 'yoga:auto_session' %}"
+            class="block hover:text-green-600 {% if request.resolver_match.url_name == 'auto_session' %}text-green-600 font-semibold{% endif %}">Auto
+            Detect</a></li>
+        <li><a href="{% url 'yoga:profile' %}"
+            class="block hover:text-green-600 {% if request.resolver_match.url_name == 'profile' %}text-green-600 font-semibold{% endif %}">Profile</a>
+        </li>
+        <li>
+          <a href="{% url 'yoga:logout' %}"
+            class="inline-block bg-red-600 text-white font-medium py-2 px-4 rounded-lg shadow hover:bg-red-700 transition duration-300">
+            logout
+          </a>
+        </li>
+        {% else %}
+        <li>
+          <a href="{% url 'yoga:signup' %}"
+            class="inline-block bg-green-600 text-white font-medium py-2 px-4 rounded-lg shadow hover:bg-green-700 transition duration-300">
+            Sign Up / Login
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+    </nav>
   </header>
 
   <!-- Main Content -->
@@ -50,9 +99,30 @@
 
   <!-- Footer -->
   <footer class="bg-gray-100 text-center py-4 text-sm text-gray-500 border-t mt-auto">
-    ©  Yoga AI
+    © Yoga AI
   </footer>
+
+  <script>
+    const navToggle = document.getElementById('navToggle');
+    const mobileMenu = document.getElementById('mobileMenu');
+    const barTop = document.getElementById('barTop');
+    const barMid = document.getElementById('barMid');
+    const barBot = document.getElementById('barBot');
+
+    navToggle.addEventListener('click', () => {
+      const isOpen = !mobileMenu.classList.contains('hidden');
+      mobileMenu.classList.toggle('hidden');
+      navToggle.setAttribute('aria-expanded', String(!isOpen));
+
+      barTop.classList.toggle('rotate-45');
+      barTop.classList.toggle('translate-y-2');
+      barMid.classList.toggle('opacity-0');
+      barBot.classList.toggle('-rotate-45');
+      barBot.classList.toggle('-translate-y-2');
+    });
+  </script>
 
   {% block scripts %}{% endblock %}
 </body>
+
 </html>

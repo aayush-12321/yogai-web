@@ -10,7 +10,9 @@ from django.utils import timezone
 from datetime import timedelta
 import calendar
 from datetime import date, datetime
-import requests
+from yoga_backend.models import YogaSession
+from django.db.models import Avg
+from django.db.models.functions import Coalesce
 
 
 def landing(request):
@@ -27,6 +29,7 @@ def poses_view(request):
         'warrior2': 'warrior2',
         'warrior ii': 'warrior2',
         'warrior': 'warrior2',
+        'chair': 'chair',
     }
     
     for pose in poses:
@@ -42,7 +45,7 @@ def poses_view(request):
             pose.pose_slug = pose_title_lower.replace(' pose', '').replace(' ', '')
         
         # Ensure we have a valid slug
-        if pose.pose_slug not in ['plank', 'mountain', 'warrior2']:
+        if pose.pose_slug not in ['plank', 'mountain', 'warrior2', 'chair']:
             pose.pose_slug = 'plank'  # default fallback
     
     return render(request, 'yoga/poses.html', {'poses': poses})
@@ -125,38 +128,35 @@ def profile_view(request):
     prev_month = first_day - timedelta(days=1)
     next_month = (first_day + timedelta(days=31)).replace(day=1)
 
-    try:
-        user_id = request.user.id if request.user.is_authenticated else None
-        
-        # Call the stats API
-        api_url = request.build_absolute_uri('/api/yoga/user/stats/')
-        if user_id:
-            api_url += f'?user_id={user_id}'
-        
-        response = requests.get(api_url)
-        stats = response.json() if response.status_code == 200 else {}
-        
-    except Exception as e:
-        print(f"Error fetching stats: {e}")
-        stats = {
-            'total_sessions': 0,
-            'avg_accuracy': 0,
-            'total_hours': 0,
-            'longest_streak': 0,
-            'recent_sessions': []
-        }
-    
-    # context = {
-    #     'total_sessions': stats.get('total_sessions', 0),
-    #     'avg_accuracy': stats.get('avg_accuracy', 0),
-    #     'total_hours': stats.get('total_hours', 0),
-    #     'longest_streak': stats.get('longest_streak', 0),
-    #     'recent_sessions': stats.get('recent_sessions', []),
-    #     'user': request.user
-    # } 
+    # --- Fetch stats directly from DB (no loopback HTTP call) ---
+    completed = YogaSession.objects.filter(user=request.user, ended_at__isnull=False)
+    total_sessions = completed.count()
+    avg_accuracy = round(
+        completed.aggregate(avg_acc=Coalesce(Avg("accuracy"), 0.0))["avg_acc"], 1
+    )
+    total_seconds = sum(
+        (s.ended_at - s.started_at).total_seconds()
+        for s in completed if s.started_at and s.ended_at
+    )
+    total_hours = round(total_seconds / 3600, 2)
 
-    # return render(request, 'yoga/profile.html', context)
+    # Streak calculation
+    session_dates = sorted({s.started_at.date() for s in completed if s.started_at})
+    longest_streak = 0
+    if session_dates:
+        longest = current = 1
+        for i in range(1, len(session_dates)):
+            if (session_dates[i] - session_dates[i - 1]).days == 1:
+                current += 1
+                longest = max(longest, current)
+            else:
+                current = 1
+        longest_streak = longest
 
+    # Available poses for the filter dropdown
+    available_poses = list(
+        completed.values_list("pose_name", flat=True).distinct().order_by("pose_name")
+    )
 
     return render(request, "yoga/profile.html",{
         "profile": profile,
@@ -167,18 +167,18 @@ def profile_view(request):
         "year": year,
         "prev_month": prev_month,
         "next_month": next_month,
-        'total_sessions': stats.get('total_sessions', 0),
-        'avg_accuracy': stats.get('avg_accuracy', 0),
-        'total_hours': stats.get('total_hours', 0),
-        'longest_streak': stats.get('longest_streak', 0),
-        'recent_sessions': stats.get('recent_sessions', []),
-        'user': request.user
-
+        'total_sessions': total_sessions,
+        'avg_accuracy': avg_accuracy,
+        'total_hours': total_hours,
+        'longest_streak': longest_streak,
+        'available_poses': available_poses,
+        'user': request.user,
     })
 
 
 
 
+@login_required
 def edit_profile_view(request):
     profile = request.user.profile
     if request.method == "POST":

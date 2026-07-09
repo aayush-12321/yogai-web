@@ -11,12 +11,12 @@
             <!-- Main Webcam Panel -->
             <div class="lg:col-span-3">
                 <div class="bg-white rounded-lg shadow-lg overflow-hidden">
-                    <div class="aspect-video bg-gray-900 relative">
+                    <div class="aspect-[3/4] md:aspect-video bg-gray-900 relative">
 
-                        <video id="webcam" autoplay muted playsinline class="w-full h-full object-cover"
+                        <video id="webcam" autoplay muted playsinline class="w-full h-full object-contain"
                             style="display:block;"></video>
 
-                        <canvas id="canvas" class="absolute inset-0 w-full h-full"
+                        <canvas id="canvas" class="absolute inset-0 w-full h-full object-contain"
                             style="background:transparent; pointer-events:none;"></canvas>
 
                         <!-- Overlay shown before session starts -->
@@ -112,11 +112,11 @@
                                     </svg>
                                 </button>
 
-                                <!-- Speed toggle: 0.5x ↔ 1x -->
+                                <!-- Speed toggle: 0.5x ↔ 1x ↔ 1.5x ↔ 2x -->
                                 <button id="vcSpeed"
                                     class="text-white text-xs font-bold border border-white border-opacity-50 rounded px-2 py-0.5 hover:border-green-400 hover:text-green-400 transition-colors"
                                     title="Toggle playback speed">
-                                    0.5×
+                                    1×
                                 </button>
 
                                 <span class="text-white text-xs opacity-60 ml-auto">
@@ -340,6 +340,10 @@
     // MediaPipe
     let pose = null;
     let poseReady = false;
+
+    // Current skeleton colour state (green when correct, red when incorrect, yellow when unclear)
+    let currentIsCorrect = false;
+    let skeletonColor = '#00FF00';
 
     // Generation counters (prevent stale loop callbacks)
     let liveLoopGen = 0;
@@ -598,19 +602,25 @@
         syncPlayPauseIcon();
     });
 
-    // Speed toggle: 0.5x <-> 1x
+    // Speed toggle: 0.5x, 1x, 1.5x, 2x
     vcSpeed.addEventListener('click', () => {
         if (!sessionActive || !isVideoMode) return;
-        if (videoEl.playbackRate === 0.5) {
-            videoEl.playbackRate = 1.0;
-            vcSpeed.textContent = '1×';
-        } else {
+        if (videoEl.playbackRate === 1.0) {
+            videoEl.playbackRate = 1.5;
+            vcSpeed.textContent = '1.5×';
+        } else if (videoEl.playbackRate === 1.5) {
+            videoEl.playbackRate = 2.0;
+            vcSpeed.textContent = '2×';
+        } else if (videoEl.playbackRate === 2.0) {
             videoEl.playbackRate = 0.5;
             vcSpeed.textContent = '0.5×';
+        } else {
+            videoEl.playbackRate = 1.0;
+            vcSpeed.textContent = '1×';
         }
     });
 
-    // Seek bar — click to seek
+    // Seek bar -click to seek
     seekBarTrack.addEventListener('click', (e) => {
         if (!sessionActive || !isVideoMode || !videoEl.duration) return;
         const rect = seekBarTrack.getBoundingClientRect();
@@ -619,7 +629,7 @@
         updateSeekBar();
     });
 
-    // Seek bar — drag to seek
+    // Seek bar -drag to seek
     let seekDragging = false;
     seekBarTrack.addEventListener('mousedown', (e) => {
         if (!sessionActive || !isVideoMode) return;
@@ -721,8 +731,9 @@
         }
         ctx.drawImage(results.image, 0, 0, canvasEl.width, canvasEl.height);
         if (results.poseLandmarks) {
+            // Use dynamic skeleton colour based on latest backend prediction
             drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS,
-                { color: '#00FF00', lineWidth: 4 });
+                { color: skeletonColor, lineWidth: 4 });
             drawLandmarks(ctx, results.poseLandmarks,
                 { color: '#FF0000', lineWidth: 2, radius: 4 });
         }
@@ -893,21 +904,29 @@
 
         let msg, type;
         if (isCorrect && !isUnknown) {
-            msg = `✓ Great form! You are holding ${poseLabelOf(targetPoseLabel)} correctly. (${confPct}% confidence)`;
+            msg = `✓ Great form! You are holding ${poseLabelOf(targetPoseLabel)} correctly.`;
             type = 'success';
         } else if (isUnknown) {
             msg = confidence === 0
-                ? `⚠ Pose unclear — make sure your full body is visible and the lighting is good.`
-                : `⚠ Almost there! Confidence is ${confPct}% — adjust your position slightly.`;
+                ? `⚠ Pose unclear - make sure your full body is visible and the lighting is good.`
+                : `⚠ Almost there! Confidence is ${confPct}% - adjust your position slightly.`;
             type = 'warning';
         } else if (backendFeedback) {
             msg = `✗ ${backendFeedback}`;
             type = 'error';
         } else {
-            msg = `✗ ${poseLabelOf(prediction)} detected. (${confPct}% confidence)`;
+            msg = `✗ ${poseLabelOf(prediction)} detected.`;
             type = 'error';
         }
         showFeedback(msg, type);
+
+        // Update skeleton colour state used by onPoseResults drawing.
+        currentIsCorrect = !!(isCorrect && !isUnknown);
+        if (isUnknown) {
+            skeletonColor = '#FFFF00';
+        } else {
+            skeletonColor = currentIsCorrect ? '#00FF00' : '#FF0000';
+        }
     }
 
     function handleDetectionResult(result) {
@@ -919,7 +938,7 @@
             statusIcon.className = 'w-3 h-3 rounded-full bg-yellow-400';
             statusText.textContent = 'Unclear ?';
             statusText.className = 'text-sm font-medium text-yellow-700';
-            showFeedback(result.message || '⚠ No pose detected — step back so your full body is visible.', 'warning');
+            showFeedback(result.message || '⚠ No pose detected -step back so your full body is visible.', 'warning');
             totalFrames++; updateStats(); return;
         }
         applyPoseUI({
@@ -1013,7 +1032,7 @@
             statusIcon.className = 'w-3 h-3 rounded-full bg-yellow-400';
             statusText.textContent = 'Unclear ?';
             statusText.className = 'text-sm font-medium text-yellow-700';
-            showFeedback(smoothedResult.message || '⚠ No pose detected — step back so your full body is visible.', 'warning');
+            showFeedback(smoothedResult.message || '⚠ No pose detected -step back so your full body is visible.', 'warning');
             totalFrames++; updateStats(); return;
         }
         applyPoseUI({
@@ -1127,7 +1146,7 @@
 
         showFeedback(
             `Analysis complete! Overall accuracy: ${overallAccuracy.toFixed(1)}% ` +
-            `(${totalCorrect}/${totalAnalyzed} frames correct) — Starting playback…`,
+            `(${totalCorrect}/${totalAnalyzed} frames correct) -Starting playback…`,
             overallAccuracy >= 70 ? 'success' : 'warning'
         );
 
@@ -1154,9 +1173,9 @@
         captureCanvas.width = w; captureCanvas.height = h;
 
         videoEl.currentTime = 0;
-        videoEl.playbackRate = 0.5;
+        videoEl.playbackRate = 1.0;
         videoEl.loop = false; // Never loop
-        vcSpeed.textContent = '0.5×';  // Reset speed toggle label
+        vcSpeed.textContent = '1×';  // Reset speed toggle label
         sessionTime = 0;
         timerEl.textContent = '00:00';
 
